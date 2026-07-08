@@ -18,6 +18,8 @@ return [
 
     'default' => env('DB_CONNECTION', 'mysql'),
 
+    'url' => env('DATABASE_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections
