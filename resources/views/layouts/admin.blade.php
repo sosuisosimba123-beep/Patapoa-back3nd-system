@@ -62,6 +62,10 @@
                 <span class="material-symbols-outlined">dashboard</span>
                 <span class="text-sm">Overview</span>
             </a>
+            <a href="{{ route('admin.orders') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all {{ request()->routeIs('admin.orders') ? 'active-nav' : 'text-on-surface-variant font-medium hover:bg-surface-container-highest' }}">
+                <span class="material-symbols-outlined">shopping_cart</span>
+                <span class="text-sm">Orders</span>
+            </a>
             <a href="{{ route('admin.merchants') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all {{ request()->routeIs('admin.merchants') ? 'active-nav' : 'text-on-surface-variant font-medium hover:bg-surface-container-highest' }}">
                 <span class="material-symbols-outlined">storefront</span>
                 <span class="text-sm">Merchants</span>
@@ -74,7 +78,7 @@
                 <span class="material-symbols-outlined">receipt_long</span>
                 <span class="text-sm">Transactions</span>
             </a>
-            <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-on-surface-variant font-medium hover:bg-surface-container-highest">
+            <a href="{{ route('admin.settings') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all {{ request()->routeIs('admin.settings') ? 'active-nav' : 'text-on-surface-variant font-medium hover:bg-surface-container-highest' }}">
                 <span class="material-symbols-outlined">settings</span>
                 <span class="text-sm">Settings</span>
             </a>

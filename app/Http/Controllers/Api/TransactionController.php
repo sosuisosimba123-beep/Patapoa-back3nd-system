@@ -12,14 +12,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Services\PushNotificationService;
 
 class TransactionController extends Controller
 {
     protected $clickpesa;
+    protected $notifications;
 
-    public function __construct(ClickpesaService $clickpesa)
+    public function __construct(ClickpesaService $clickpesa, PushNotificationService $notifications)
     {
         $this->clickpesa = $clickpesa;
+        $this->notifications = $notifications;
     }
 
     public function index(Request $request)
@@ -61,7 +64,8 @@ class TransactionController extends Controller
                 return $this->processWalletPayment($request->user(), $order);
             } else {
                 // Clickpesa Integration
-                $transRef = 'PAT-' . time() . '-' . $order->id;
+                // Improved reference: Service-Type-Timestamp-OrderID-Random
+                $transRef = 'PAT-PAY-' . time() . '-' . $order->id . '-' . strtoupper(\Illuminate\Support\Str::random(4));
 
                 $transaction = Transaction::create([
                     'user_id' => $request->user()->id,
@@ -146,6 +150,14 @@ class TransactionController extends Controller
 
         DB::commit();
 
+        // 4. Successful payments made by the customer
+        $this->notifications->sendToUser(
+            $user,
+            'Payment Successful',
+            'Your payment for order #' . $order->id . ' was successful.',
+            ['type' => 'payment_success', 'order_id' => $order->id]
+        );
+
         return $this->successResponse([
             'transaction' => $transaction,
             'order' => $order->fresh(),
@@ -154,6 +166,15 @@ class TransactionController extends Controller
 
     public function paymentCallback(Request $request)
     {
+        // 1. Webhook Security Check
+        $headerSecret = $request->header('X-Clickpesa-Secret');
+        $configSecret = config('services.clickpesa.webhook_secret');
+
+        if ($configSecret && $headerSecret !== $configSecret) {
+            Log::warning('Unauthorized Clickpesa Webhook Attempt', ['ip' => $request->ip()]);
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
         $data = $request->all();
         Log::info('Clickpesa Webhook Received', ['data' => $data]);
 
@@ -194,6 +215,14 @@ class TransactionController extends Controller
                     'payment_status' => 'paid',
                     'status' => 'confirmed',
                 ]);
+
+                // 4. Successful payments made by the customer
+                $this->notifications->sendToUser(
+                    $order->customer,
+                    'Payment Successful',
+                    'Your payment for order #' . $order->id . ' was successful.',
+                    ['type' => 'payment_success', 'order_id' => $order->id]
+                );
 
             } else if (in_array($status, ['FAILED', 'CANCELLED', 'DECLINED'])) {
                 $internalStatus = 'failed';
@@ -300,10 +329,42 @@ class TransactionController extends Controller
             return $this->errorResponse('Unauthorized', 403);
         }
 
+        // Fallback: If status is still pending, check with Clickpesa directly
+        if ($order->payment_status === 'pending') {
+            $transaction = Transaction::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->latest()
+                ->first();
+
+            if ($transaction && $transaction->transaction_reference) {
+                try {
+                    $statusData = $this->clickpesa->queryStatus($transaction->transaction_reference);
+
+                    // If Clickpesa says it's successful, update it manually here
+                    $remoteStatus = strtoupper($statusData['status'] ?? '');
+                    if ($remoteStatus === 'SUCCESSFUL' || $remoteStatus === 'PAID') {
+                        DB::transaction(function() use ($transaction, $order) {
+                            $transaction->update(['status' => 'completed', 'processed_at' => now()]);
+                            $order->update(['payment_status' => 'paid', 'status' => 'confirmed']);
+                        });
+                        return $this->successResponse([
+                            'order_id' => $order->id,
+                            'payment_status' => 'paid',
+                            'status' => 'confirmed',
+                            'source' => 'gateway_sync'
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Status Sync Failed', ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
         return $this->successResponse([
             'order_id' => $order->id,
             'payment_status' => $order->payment_status,
             'status' => $order->status,
+            'source' => 'database'
         ]);
     }
 }

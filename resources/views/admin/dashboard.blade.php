@@ -85,26 +85,75 @@
         </div>
     </div>
 
-    <!-- Top Merchants -->
+    <!-- Expansion Data / Waitlist -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-outline-variant">
-        <h3 class="text-lg font-bold text-on-surface mb-6">Top Performing Merchants</h3>
-        <div class="space-y-4">
-            @foreach($topMerchants as $merchant)
-            <div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container-low transition-all">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($merchant->store_name) }}&background=006d3b&color=fff" class="w-full h-full object-cover"/>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-on-surface">{{ $merchant->store_name }}</h4>
-                        <p class="text-xs text-on-surface-variant">{{ $merchant->orders_count }} orders</p>
-                    </div>
+        <h3 class="text-lg font-bold text-on-surface mb-6">Strategic Expansion Data</h3>
+
+        <div class="mb-6">
+            <h4 class="text-xs font-black uppercase tracking-widest text-primary mb-3">Unmet Demand (Top Searches)</h4>
+            <div class="space-y-2">
+                @foreach($unmetDemand as $item)
+                <div class="flex justify-between items-center text-sm p-2 bg-surface-container-low rounded">
+                    <span>{{ $item->query }}</span>
+                    <span class="font-bold text-primary">{{ $item->search_count }} hits</span>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm font-black text-primary">TSH {{ number_format($merchant->revenue / 1000, 1) }}k</p>
-                </div>
+                @endforeach
             </div>
-            @endforeach
+        </div>
+
+        <div>
+            <h4 class="text-xs font-black uppercase tracking-widest text-secondary mb-3">Waitlist Hotspots</h4>
+            <div class="space-y-2">
+                @foreach($waitlistHotspots as $hotspot)
+                <div class="flex justify-between items-center text-sm p-2 bg-surface-container-low rounded">
+                    <span>{{ $hotspot->city }}</span>
+                    <span class="font-bold text-secondary">{{ $hotspot->count }} users</span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Relevant App Data Section -->
+<div class="bg-white rounded-xl shadow-sm border border-outline-variant p-6 mt-6">
+    <h3 class="text-lg font-bold text-on-surface mb-6 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">analytics</span>
+        Global Platform Overview
+    </h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="space-y-1">
+            <p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-black">Registered Customers</p>
+            <p class="text-2xl font-black text-on-surface">{{ $systemData['customers_count'] }}</p>
+        </div>
+        <div class="space-y-1">
+            <p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-black">Supermarket Partners</p>
+            <p class="text-2xl font-black text-on-surface">{{ $systemData['merchants_count'] }}</p>
+        </div>
+        <div class="space-y-1">
+            <p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-black">Delivery Partners</p>
+            <p class="text-2xl font-black text-on-surface">{{ $systemData['riders_count'] }}</p>
+        </div>
+        <div class="space-y-1">
+            <p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-black">Live Order Queue</p>
+            <p class="text-2xl font-black text-primary">{{ $systemData['active_orders_count'] }}</p>
+        </div>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-outline-variant grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+            <h4 class="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-4">Inventory Reach</h4>
+            <div class="flex items-end gap-3">
+                <span class="text-4xl font-black text-on-surface">{{ $stats['total_products'] }}</span>
+                <span class="text-sm text-on-surface-variant mb-1">Items listed across all stores</span>
+            </div>
+        </div>
+        <div>
+            <h4 class="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-4">Total Order Volume</h4>
+            <div class="flex items-end gap-3">
+                <span class="text-4xl font-black text-on-surface">{{ $stats['total_orders'] }}</span>
+                <span class="text-sm text-on-surface-variant mb-1">Lifetime transactions processed</span>
+            </div>
         </div>
     </div>
 </div>

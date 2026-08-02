@@ -11,9 +11,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Services\PushNotificationService;
 
 class RiderController extends Controller
 {
+    protected $notifications;
+
+    public function __construct(PushNotificationService $notifications)
+    {
+        $this->notifications = $notifications;
+    }
+
     public function updateLocation(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -33,7 +41,7 @@ class RiderController extends Controller
         if (Cache::has($throttleKey)) {
             $lastUpdate = Cache::get($throttleKey);
             $secondsSince = now()->diffInSeconds($lastUpdate);
-            
+
             return $this->successResponse([
                 'throttled' => true,
                 'last_update' => $lastUpdate,
@@ -64,6 +72,11 @@ class RiderController extends Controller
     public function goOnline(Request $request)
     {
         $rider = $request->user()->rider;
+
+        if (!$rider->is_verified) {
+            return $this->errorResponse('Your account is not yet verified by Admin. Please wait for verification.', 403);
+        }
+
         $rider->update(['is_online' => true]);
 
         return $this->successResponse(null, 'You are now online');
@@ -72,7 +85,7 @@ class RiderController extends Controller
     public function goOffline(Request $request)
     {
         $rider = $request->user()->rider;
-        
+
         if ($rider->is_on_delivery) {
             return $this->errorResponse('Cannot go offline while on delivery', 422);
         }
@@ -105,6 +118,10 @@ class RiderController extends Controller
     {
         $rider = $request->user()->rider;
 
+        if (!$rider->is_verified) {
+            return $this->errorResponse('Unauthorized: Account not verified', 403);
+        }
+
         if (!$rider->is_online) {
             return $this->errorResponse('You must be online to accept orders', 422);
         }
@@ -132,7 +149,35 @@ class RiderController extends Controller
 
             DB::commit();
 
-            // TODO: Send push notification to merchant and customer
+            // 6. Delivery partner has received the customer location (Notify Rider)
+            $this->notifications->sendToUser(
+                $request->user(),
+                'Location Received',
+                'You have received the location for order #' . $order->id . '. Tap for directions.',
+                ['type' => 'location_received', 'order_id' => $order->id, 'lat' => $order->dropoff_latitude, 'lng' => $order->dropoff_longitude]
+            );
+
+            // Notify Merchant
+            $merchantIds = $order->orderItems()->pluck('merchant_id')->unique();
+            foreach ($merchantIds as $merchantId) {
+                $merchant = \App\Models\Merchant::find($merchantId);
+                if ($merchant && $merchant->user) {
+                    $this->notifications->sendToUser(
+                        $merchant->user,
+                        'Rider Assigned',
+                        'A rider is heading to your shop to pick up order #' . $order->id,
+                        ['type' => 'rider_assigned', 'order_id' => $order->id]
+                    );
+                }
+            }
+
+            // Notify Customer
+            $this->notifications->sendToUser(
+                $order->customer,
+                'Rider Assigned',
+                'A rider has been assigned to your order and is heading to the merchant.',
+                ['type' => 'rider_assigned', 'order_id' => $order->id]
+            );
 
             return $this->successResponse($order->fresh(), 'Order accepted successfully');
 
@@ -170,7 +215,7 @@ class RiderController extends Controller
             'at_dropoff' => ['delivered'],
         ];
 
-        if (!isset($validTransitions[$order->status]) || 
+        if (!isset($validTransitions[$order->status]) ||
             !in_array($request->status, $validTransitions[$order->status])) {
             return $this->errorResponse('Invalid status transition', 422);
         }
@@ -180,6 +225,29 @@ class RiderController extends Controller
         // Update timestamps
         if ($request->status === 'picked_up') {
             $order->update(['picked_up_at' => now()]);
+
+            // 5. When the delivery partner is picking goods from the merchant
+            // Notify Merchant
+            $merchantIds = $order->orderItems()->pluck('merchant_id')->unique();
+            foreach ($merchantIds as $merchantId) {
+                $merchant = \App\Models\Merchant::find($merchantId);
+                if ($merchant && $merchant->user) {
+                    $this->notifications->sendToUser(
+                        $merchant->user,
+                        'Goods Picked Up',
+                        'Rider has picked up goods for order #' . $order->id,
+                        ['type' => 'goods_picked_up', 'order_id' => $order->id]
+                    );
+                }
+            }
+
+            // Notify Customer
+            $this->notifications->sendToUser(
+                $order->customer,
+                'Order Picked Up',
+                'Your order #' . $order->id . ' has been picked up and is heading to you!',
+                ['type' => 'order_status', 'order_id' => $order->id, 'status' => 'picked_up']
+            );
         }
 
         if ($request->status === 'delivered') {
@@ -192,8 +260,8 @@ class RiderController extends Controller
             $rider->update(['is_on_delivery' => false]);
             $rider->increment('total_deliveries');
 
-            // Calculate and credit rider earnings
-            $this->creditRiderEarnings($rider, $order);
+            // Calculate and credit earnings for both Rider and Merchant
+            $this->creditEarnings($rider, $order);
         }
 
         // TODO: Send push notification to customer
@@ -287,16 +355,16 @@ class RiderController extends Controller
     public function riderOrders(Request $request)
     {
         $rider = $request->user()->rider;
-        
+
         $query = Order::where('rider_id', $rider->id)
             ->with(['orderItems', 'customer', 'address'])
             ->orderBy('created_at', 'desc');
-        
+
         $orders = $this->paginateQuery($query, $request, 20, 100);
-        
+
         return $this->paginatedResponse($orders, 'Rider orders retrieved successfully');
     }
-    
+
     public function profile(Request $request)
     {
         $riderId = $request->user()->id;
@@ -305,7 +373,7 @@ class RiderController extends Controller
         $data = $this->remember($cacheKey, function () use ($request) {
             $user = $request->user()->load(['rider', 'wallet']);
             $rider = $user->rider;
-            
+
             return [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -322,14 +390,14 @@ class RiderController extends Controller
                 'tier' => $rider->tier ?? 'Bronze',
             ];
         }, 60);
-        
+
         return $this->successResponse($data, 'Profile retrieved successfully');
     }
 
-    private function creditRiderEarnings($rider, $order)
+    private function creditEarnings($rider, $order)
     {
-        // Calculate rider earnings (e.g., 70% of delivery fee)
-        $riderEarning = $order->delivery_fee * 0.7;
+        // 1. Credit Rider (95% of delivery fee)
+        $riderEarning = $order->delivery_fee * 0.95;
 
         Transaction::create([
             'user_id' => $rider->user_id,
@@ -339,14 +407,38 @@ class RiderController extends Controller
             'amount' => $riderEarning,
             'currency' => 'TZS',
             'payment_method' => 'wallet',
-            'description' => 'Delivery earning for order #' . $order->id,
+            'description' => 'Delivery earning for order #' . $order->id . ' (less 5% commission)',
             'processed_at' => now(),
         ]);
 
-        // Update wallet
-        $wallet = $rider->user()->wallet;
-        if ($wallet) {
-            $wallet->increment('balance', $riderEarning);
+        if ($rider->user->wallet) {
+            $rider->user->wallet->increment('balance', $riderEarning);
+        }
+
+        // 2. Credit Merchant (Subtotal * 0.95)
+        $firstItem = $order->orderItems()->first();
+        if ($firstItem && $firstItem->merchant_id) {
+            $merchant = \App\Models\Merchant::find($firstItem->merchant_id);
+
+            if ($merchant && $merchant->user) {
+                $merchantEarning = $order->subtotal * 0.95;
+
+                Transaction::create([
+                    'user_id' => $merchant->user_id,
+                    'order_id' => $order->id,
+                    'type' => 'earning',
+                    'status' => 'completed',
+                    'amount' => $merchantEarning,
+                    'currency' => 'TZS',
+                    'payment_method' => 'wallet',
+                    'description' => 'Sales earning for order #' . $order->id . ' (less 5% commission)',
+                    'processed_at' => now(),
+                ]);
+
+                if ($merchant->user->wallet) {
+                    $merchant->user->wallet->increment('balance', $merchantEarning);
+                }
+            }
         }
     }
 }

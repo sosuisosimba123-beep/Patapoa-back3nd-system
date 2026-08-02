@@ -12,6 +12,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'order_number',
         'customer_id',
         'rider_id',
         'address_id',
@@ -39,7 +40,7 @@ class Order extends Model
         'actual_duration_minutes',
     ];
 
-    protected $appends = ['order_number', 'total_amount', 'delivery_address', 'delivery_notes', 'items'];
+    protected $appends = ['display_id', 'total_amount', 'delivery_address', 'delivery_notes', 'items_list'];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
@@ -59,9 +60,9 @@ class Order extends Model
         'delivered_at' => 'datetime',
     ];
 
-    public function getOrderNumberAttribute(): string
+    public function getDisplayIdAttribute(): string
     {
-        return '#' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+        return $this->order_number ?? '#' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
     }
 
     public function getTotalAmountAttribute(): float
@@ -71,7 +72,7 @@ class Order extends Model
 
     public function getDeliveryAddressAttribute(): ?string
     {
-        return $this->address ? $this->address->full_address : null;
+        return $this->address ? ($this->address->address_line_1 . ', ' . $this->address->city) : null;
     }
 
     public function getDeliveryNotesAttribute(): ?string
@@ -79,17 +80,16 @@ class Order extends Model
         return $this->customer_notes;
     }
 
-    public function getItemsAttribute()
+    public function getItemsListAttribute()
     {
         return $this->orderItems->map(function ($item) {
             return [
                 'id' => $item->id,
-                'order_id' => $item->order_id,
                 'product_id' => $item->product_id,
                 'product_name' => $item->product_name,
                 'quantity' => $item->quantity,
                 'unit_price' => (float) $item->unit_price,
-                'total_price' => (float) $item->subtotal,
+                'subtotal' => (float) $item->subtotal,
             ];
         });
     }

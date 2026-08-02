@@ -9,11 +9,34 @@
         <h2 class="text-2xl font-black text-on-surface">Merchant Management</h2>
         <p class="text-sm text-on-surface-variant">Review, approve, and manage all retail partners across the platform.</p>
     </div>
-    <button class="flex items-center justify-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-xl font-bold shadow-md hover:shadow-lg active:scale-95 transition-all">
+    <button onclick="toggleMerchantForm()" class="flex items-center justify-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-xl font-bold shadow-md hover:shadow-lg active:scale-95 transition-all">
         <span class="material-symbols-outlined">add</span>
-        Add New Merchant
+        Add New Supermarket
     </button>
 </div>
+
+<!-- Add Merchant Form (Hidden by default) -->
+<div id="merchantForm" class="hidden bg-white p-6 rounded-xl border border-primary/20 shadow-lg mt-6">
+    <h3 class="text-lg font-bold mb-4">Onboard New Supermarket Partner</h3>
+    <form action="{{ route('admin.merchants.store') }}" method="POST">
+        @csrf
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <input type="text" name="store_name" placeholder="Store Name" required class="p-2 border rounded-lg">
+            <input type="text" name="owner_name" placeholder="Owner Full Name" required class="p-2 border rounded-lg">
+            <input type="text" name="phone" placeholder="Phone Number" required class="p-2 border rounded-lg">
+            <input type="password" name="password" placeholder="Initial Password" required class="p-2 border rounded-lg">
+            <input type="text" name="city" placeholder="Operating City" required class="p-2 border rounded-lg">
+            <button type="submit" class="bg-primary text-on-primary font-bold rounded-lg py-2">Onboard Merchant</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleMerchantForm() {
+        const form = document.getElementById('merchantForm');
+        form.classList.toggle('hidden');
+    }
+</script>
 
 <!-- Stats Overview -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -95,12 +118,20 @@
                     <td class="px-6 py-4 text-sm text-right font-black text-on-surface">{{ $merchant->orders_count }}</td>
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-center gap-2">
-                            <button class="p-1 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded transition-all">
-                                <span class="material-symbols-outlined text-[20px]">visibility</span>
-                            </button>
-                            <button class="p-1 text-on-surface-variant hover:text-secondary hover:bg-secondary/10 rounded transition-all">
-                                <span class="material-symbols-outlined text-[20px]">edit</span>
-                            </button>
+                            <form action="{{ route('admin.users.toggle-status', $merchant->user_id) }}" method="POST" class="inline">
+                                @csrf
+                                <button type="submit" class="px-3 py-1 {{ $merchant->user->is_active ? 'bg-error/10 text-error' : 'bg-green-100 text-green-700' }} text-[10px] font-bold rounded-lg transition-all">
+                                    {{ $merchant->user->is_active ? 'SUSPEND' : 'ACTIVATE' }}
+                                </button>
+                            </form>
+                            @if(!$merchant->is_verified)
+                            <form action="{{ route('admin.merchants.verify', $merchant->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="px-3 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-lg shadow hover:bg-primary/90 transition-all">
+                                    APPROVE
+                                </button>
+                            </form>
+                            @endif
                         </div>
                     </td>
                 </tr>

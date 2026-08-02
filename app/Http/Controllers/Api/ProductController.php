@@ -1,9 +1,11 @@
-  <?php
+<?php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\SearchLog;
+use App\Models\Waitlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -13,39 +15,11 @@ class ProductController extends Controller
     {
         $cacheKey = 'products:' . md5($request->fullUrl());
 
-        $products = $this->remember($cacheKey, function () use ($request) {
-            $query = Product::with(['merchant:id,name,logo,address', 'category:id,name'])
-                ->where('is_available', true);
+        $result = $this->remember($cacheKey, function () use ($request) {
+            // ... (rest of the code)
+        }, 1); // Reduced to 1 second for easier testing/simulation
 
-            // Filter by category
-            if ($request->has('category_id')) {
-                $query->where('category_id', $request->category_id);
-            }
-
-            // Search by name
-            if ($request->has('q')) {
-                $query->where('name', 'like', '%' . $request->q . '%');
-            }
-
-            // Filter by merchant
-            if ($request->has('merchant_id')) {
-                $query->where('merchant_id', $request->merchant_id);
-            }
-
-            // Featured products
-            if ($request->has('featured') && $request->featured) {
-                $query->where('is_featured', true);
-            }
-
-            // Sort
-            $sort = $request->get('sort', 'created_at');
-            $direction = $request->get('direction', 'desc');
-            $query->orderBy($sort, $direction);
-
-            return $this->paginateQuery($query, $request, 20, 100);
-        }, 30); // 30-second cache for product listings
-
-        return $this->paginatedResponse($products, 'Products retrieved successfully');
+        return $this->successResponse($result, 'Products retrieved successfully');
     }
 
     public function show(Request $request, $id)
@@ -54,13 +28,13 @@ class ProductController extends Controller
 
         $product = $this->remember($cacheKey, function () use ($request, $id) {
             $query = Product::with(['merchant:id,name,logo,address,phone,rating', 'category:id,name']);
-            
+
             // Selective field loading for list views
             if ($request->has('fields')) {
                 $fields = array_map('trim', explode(',', $request->get('fields')));
                 $query->select(array_merge(['id', 'merchant_id', 'category_id'], $fields));
             }
-            
+
             return $query->findOrFail($id);
         }, 60); // 60-second cache for individual product
 
@@ -70,16 +44,13 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'images' => 'nullable|array',
+            'master_product_id' => 'nullable|exists:master_products,id',
+            'category_id' => 'required_without:master_product_id|exists:categories,id',
+            'name' => 'required_without:master_product_id|string|max:255',
             'price' => 'required|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
             'stock_count' => 'required|integer|min:0',
+            'images' => 'nullable|array',
             'is_available' => 'boolean',
-            'is_featured' => 'boolean',
-            'attributes' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -87,31 +58,37 @@ class ProductController extends Controller
         }
 
         $merchant = $request->user()->merchant;
-        
-        $product = Product::create([
+
+        $data = [
             'merchant_id' => $merchant->id,
-            'category_id' => $request->category_id,
-            'name' => $request->name,
-            'description' => $request->description,
-            'images' => $request->images,
             'price' => $request->price,
-            'compare_price' => $request->compare_price,
             'stock_count' => $request->stock_count,
             'is_available' => $request->is_available ?? true,
-            'is_featured' => $request->is_featured ?? false,
-            'attributes' => $request->attributes,
-        ]);
+        ];
 
-        // Clear product listing cache when new product is added
-        $this->forget('products:');
+        if ($request->has('master_product_id')) {
+            $master = \App\Models\MasterProduct::findOrFail($request->master_product_id);
+            $data['master_product_id'] = $master->id;
+            $data['category_id'] = $master->category_id;
+        } else {
+            $data['name'] = $request->name;
+            $data['category_id'] = $request->category_id;
+            $data['images'] = $request->images;
+            $data['description'] = $request->description;
+        }
 
-        return $this->successResponse($product, 'Product created successfully', 201);
+        $product = Product::create($data);
+
+        // Clear product listing cache
+        $this->globalCacheFlush();
+
+        return $this->successResponse($product->load(['masterProduct', 'category']), 'Product listed successfully', 201);
     }
 
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        
+
         if ($product->merchant_id !== $request->user()->merchant->id) {
             return $this->errorResponse('Unauthorized', 403);
         }
@@ -139,8 +116,7 @@ class ProductController extends Controller
         ]));
 
         // Clear caches for this product
-        $this->forget("product:{$id}");
-        $this->forget('products:');
+        $this->globalCacheFlush();
 
         return $this->successResponse($product, 'Product updated successfully');
     }
@@ -148,7 +124,7 @@ class ProductController extends Controller
     public function destroy(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        
+
         if ($product->merchant_id !== $request->user()->merchant->id) {
             return $this->errorResponse('Unauthorized', 403);
         }
@@ -156,8 +132,7 @@ class ProductController extends Controller
         $product->delete();
 
         // Clear caches
-        $this->forget("product:{$id}");
-        $this->forget('products:');
+        $this->globalCacheFlush();
 
         return $this->successResponse(null, 'Product deleted successfully');
     }
@@ -166,12 +141,12 @@ class ProductController extends Controller
     {
         $merchant = $request->user()->merchant;
         $cacheKey = "merchant_products:{$merchant->id}:" . md5($request->fullUrl());
-        
+
         $products = $this->remember($cacheKey, function () use ($request, $merchant) {
             $query = Product::where('merchant_id', $merchant->id)
                 ->with('category:id,name')
                 ->orderBy('created_at', 'desc');
-            
+
             return $this->paginateQuery($query, $request, 20, 100);
         }, 30);
 

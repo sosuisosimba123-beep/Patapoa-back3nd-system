@@ -6,60 +6,79 @@ use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Merchant;
 use App\Models\Category;
+use App\Models\User;
+use App\Models\MasterProduct;
+use Illuminate\Support\Facades\Hash;
 
 class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $electronics = Category::where('slug', 'electronics')->first();
-        $groceries = Category::where('slug', 'groceries')->first();
-        $hardware = Category::where('slug', 'hardware')->first();
+        // 1. Create a Fake Merchant User (For Testing)
+        $merchantUser = User::updateOrCreate(
+            ['phone' => '0700000000'],
+            [
+                'name' => 'Demo Supermarket Owner',
+                'email' => 'demo_merchant@patapoa.com',
+                'password' => Hash::make('password'),
+                'user_type' => 'merchant',
+                'is_active' => true,
+                'is_verified' => true,
+                'phone_verified_at' => now(),
+            ]
+        );
 
-        $merchant = Merchant::first(); // Your test merchant
+        // 2. Create Merchant Profile
+        $merchant = Merchant::updateOrCreate(
+            ['user_id' => $merchantUser->id],
+            [
+                'store_name' => 'Patapoa Demo Store (Moshi)',
+                'address' => 'Moshi Town Center',
+                'latitude' => -3.3488,
+                'longitude' => 37.3400,
+                'city' => 'Moshi',
+                'is_verified' => true,
+                'is_online' => true,
+                'rating' => 5.0,
+            ]
+        );
 
-        if (!$merchant) return;
+        // 3. Create a Fake Rider
+        $riderUser = User::updateOrCreate(
+            ['phone' => '0711111111'],
+            [
+                'name' => 'Demo Rider',
+                'email' => 'demo_rider@patapoa.com',
+                'password' => Hash::make('password'),
+                'user_type' => 'rider',
+                'is_active' => true,
+                'is_verified' => true,
+                'phone_verified_at' => now(),
+            ]
+        );
 
-        // Electronics
-        Product::create([
-            'merchant_id' => $merchant->id,
-            'category_id' => $electronics->id,
-            'name' => 'iPhone 15 Pro',
-            'description' => 'Latest Apple flagship with A17 Pro chip.',
-            'price' => 2500000,
-            'stock_count' => 10,
-            'is_available' => true,
-        ]);
+        $riderUser->rider()->updateOrCreate(
+            ['user_id' => $riderUser->id],
+            [
+                'vehicle_type' => 'motorcycle',
+                'city' => 'Moshi',
+                'is_online' => true,
+                'is_verified' => true,
+            ]
+        );
 
-        Product::create([
-            'merchant_id' => $merchant->id,
-            'category_id' => $electronics->id,
-            'name' => 'Samsung Galaxy S24',
-            'description' => 'High performance Android smartphone.',
-            'price' => 2100000,
-            'stock_count' => 15,
-            'is_available' => true,
-        ]);
-
-        // Hardware
-        Product::create([
-            'merchant_id' => $merchant->id,
-            'category_id' => $hardware->id,
-            'name' => 'Drill Machine 500W',
-            'description' => 'Heavy duty power drill for all surfaces.',
-            'price' => 185000,
-            'stock_count' => 5,
-            'is_available' => true,
-        ]);
-
-        // Groceries
-        Product::create([
-            'merchant_id' => $merchant->id,
-            'category_id' => $groceries->id,
-            'name' => 'Premium Basmati Rice 5kg',
-            'description' => 'Long grain aromatic rice.',
-            'price' => 25000,
-            'stock_count' => 100,
-            'is_available' => true,
-        ]);
+        // 4. List some items for the Demo Store
+        $masterItems = MasterProduct::limit(3)->get();
+        foreach ($masterItems as $item) {
+            Product::updateOrCreate(
+                ['merchant_id' => $merchant->id, 'master_product_id' => $item->id],
+                [
+                    'category_id' => $item->category_id,
+                    'price' => rand(1500, 5000),
+                    'stock_count' => rand(10, 100),
+                    'is_available' => true,
+                ]
+            );
+        }
     }
 }

@@ -7,13 +7,68 @@
 <div class="flex justify-between items-end">
     <div>
         <h2 class="text-3xl font-black text-on-surface">Deliverer Fleet</h2>
-        <p class="text-lg text-on-surface-variant mt-1">Managing {{ $riders->total() }} active partners in the Tanzanian logistics network.</p>
+        <p class="text-lg text-on-surface-variant mt-1">Managing partners in the Tanzanian logistics network.</p>
     </div>
-    <button class="flex items-center gap-2 bg-primary-container text-on-primary-container px-6 py-2 rounded-xl font-bold hover:brightness-95 transition-all shadow-md active:scale-95">
+    <button onclick="toggleRiderForm()" class="flex items-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-xl font-bold hover:brightness-95 transition-all shadow-md active:scale-95">
         <span class="material-symbols-outlined">add_circle</span>
-        Onboard New Rider
+        Add Rider
     </button>
 </div>
+
+<!-- Add Rider Form (Hidden by default) -->
+<div id="riderForm" class="hidden bg-white p-6 rounded-xl border border-primary/20 shadow-lg mt-6">
+    <h3 class="text-lg font-bold mb-4">Onboard New Delivery Partner</h3>
+    <form action="{{ route('admin.riders.store') }}" method="POST">
+        @csrf
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="text" name="name" placeholder="Full Name" required class="p-2 border rounded-lg">
+            <input type="text" name="phone" placeholder="Phone Number" required class="p-2 border rounded-lg">
+            <input type="password" name="password" placeholder="Password" required class="p-2 border rounded-lg">
+            <input type="text" name="city" placeholder="City (e.g. Moshi)" required class="p-2 border rounded-lg">
+            <select name="vehicle_type" class="p-2 border rounded-lg">
+                <option value="motorcycle">Motorcycle</option>
+                <option value="bicycle">Bicycle</option>
+                <option value="car">Car</option>
+            </select>
+            <button type="submit" class="bg-primary text-on-primary font-bold rounded-lg py-2">Create Partner</button>
+        </div>
+    </form>
+</div>
+
+<!-- Active Deliveries Section -->
+<div class="mt-12">
+    <h3 class="text-xl font-black text-on-surface mb-6">Live Deliveries</h3>
+    <div class="grid grid-cols-1 gap-4">
+        @forelse($activeDeliveries as $delivery)
+        <div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-primary/10 rounded-full text-primary">
+                    <span class="material-symbols-outlined">directions_bike</span>
+                </div>
+                <div>
+                    <h4 class="font-bold">Order {{ $delivery->display_id }}</h4>
+                    <p class="text-xs text-on-surface-variant">Rider: {{ $delivery->rider->user->name ?? 'Assigning...' }}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-tertiary/10 text-tertiary">
+                    {{ str_replace('_', ' ', $delivery->status) }}
+                </span>
+                <p class="text-xs mt-1 text-on-surface-variant">{{ $delivery->updated_at->diffForHumans() }}</p>
+            </div>
+        </div>
+        @empty
+        <p class="text-on-surface-variant text-center py-8 bg-surface-container-low rounded-xl border border-dashed">No active deliveries at the moment.</p>
+        @endforelse
+    </div>
+</div>
+
+<script>
+    function toggleRiderForm() {
+        const form = document.getElementById('riderForm');
+        form.classList.toggle('hidden');
+    }
+</script>
 
 <!-- KPIs Section -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">

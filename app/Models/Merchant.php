@@ -19,6 +19,8 @@ class Merchant extends Model
         'address',
         'latitude',
         'longitude',
+        'landmark',
+        'district',
         'city',
         'region',
         'commission_rate',
@@ -51,7 +53,7 @@ class Merchant extends Model
 
     public function wallet()
     {
-        return $this->hasOne(Wallet::class)->where('wallet_type', 'merchant');
+        return $this->hasOne(Wallet::class, 'user_id', 'user_id')->where('wallet_type', 'merchant');
     }
 
     public function orders(): HasMany
