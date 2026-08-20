@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Notification;
+use App\Jobs\SendPushNotification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +18,7 @@ class PushNotificationService
 
     public function __construct()
     {
-        $this->credentialsPath = storage_path('app/firebase_credentials.json');
+        $this->credentialsPath = config('services.firebase.credentials');
         $this->projectId = config('services.fcm.project_id');
     }
 
@@ -82,8 +83,10 @@ class PushNotificationService
         $project = $this->projectId;
         if (!$project) {
             // Try to extract project ID from JSON if not in config
-            $json = json_decode(file_get_contents($this->credentialsPath), true);
-            $project = $json['project_id'] ?? null;
+            if (file_exists($this->credentialsPath)) {
+                $json = json_decode(file_get_contents($this->credentialsPath), true);
+                $project = $json['project_id'] ?? null;
+            }
         }
 
         if (!$project) {
@@ -109,22 +112,9 @@ class PushNotificationService
 
         $payload = ['message' => $message];
 
-        try {
-            $response = Http::withToken($accessToken)
-                ->post($url, $payload);
+        // Dispatch to background queue to prevent blocking main thread
+        SendPushNotification::dispatch($url, $payload, $accessToken);
 
-            if ($response->successful()) {
-                return true;
-            }
-
-            Log::error('FCM Push Failed (v1)', [
-                'status' => $response->status(),
-                'body' => $response->json(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('FCM v1 Network Error', ['error' => $e->getMessage()]);
-        }
-
-        return false;
+        return true;
     }
 }

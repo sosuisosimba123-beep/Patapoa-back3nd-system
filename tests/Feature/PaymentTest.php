@@ -6,7 +6,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Address;
-use App\Services\ClickpesaService;
+use App\Services\ClickPesaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Mockery;
@@ -25,6 +25,8 @@ class PaymentTest extends TestCase
         $address = Address::create([
             'user_id' => $user->id,
             'label' => 'Home',
+            'recipient_name' => $user->name,
+            'phone' => $user->phone,
             'address_line_1' => 'Street 1',
             'city' => 'DSM',
             'latitude' => -6.123,
@@ -47,9 +49,9 @@ class PaymentTest extends TestCase
         $this->actingAs($user);
 
         // Mock Clickpesa
-        $mock = Mockery::mock(ClickpesaService::class);
+        $mock = Mockery::mock(ClickPesaService::class);
         $mock->shouldReceive('initiateUSSD')->once()->andReturn(['success' => true, 'transaction_id' => 'test_123']);
-        $this->app->instance(ClickpesaService::class, $mock);
+        $this->app->instance(ClickPesaService::class, $mock);
 
         $response = $this->postJson('/api/v1/payments/initiate', [
             'order_id' => $order->id,
@@ -76,11 +78,11 @@ class PaymentTest extends TestCase
         $this->actingAs($user);
 
         // Mock Clickpesa
-        $mock = Mockery::mock(ClickpesaService::class);
+        $mock = Mockery::mock(ClickPesaService::class);
         $mock->shouldReceive('payout')->once()->andReturn(['success' => true]);
-        $this->app->instance(ClickpesaService::class, $mock);
+        $this->app->instance(ClickPesaService::class, $mock);
 
-        $response = $this->postJson('/api/v1/rider/payout/request', [
+        $response = $this->postJson('/api/v1/delivery-partner/payout/request', [
             'amount' => 10000,
             'phone' => '255712345679',
             'provider' => 'mpesa',

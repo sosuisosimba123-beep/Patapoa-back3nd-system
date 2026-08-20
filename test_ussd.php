@@ -4,10 +4,10 @@ $app = require_once 'bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-use App\Services\ClickpesaService;
+use App\Services\ClickPesaService;
 use Illuminate\Support\Facades\Http;
 
-$service = app(ClickpesaService::class);
+$service = app(ClickPesaService::class);
 $phone = '255622606497';
 
 echo "--- DIAGNOSTIC START ---\n";

@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Merchant;
 use App\Models\Order;
-use App\Models\Rider;
+use App\Models\DeliveryPartner;
 use App\Models\Transaction;
 use App\Models\Waitlist;
 use App\Models\SearchLog;
 use App\Models\DeliveryPricingRule;
+use App\Models\OrderItem;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use App\Services\PushNotificationService;
 
 class AdminController extends Controller
@@ -42,11 +46,11 @@ class AdminController extends Controller
 
         $totalMerchants = Merchant::count();
         $activeSupermarkets = Merchant::where('is_verified', true)->where('is_online', true)->count();
-        $totalRiders = Rider::count();
-        $activeRiders = Rider::where('is_online', true)->count();
+        $totalRiders = DeliveryPartner::count();
+        $activeRiders = DeliveryPartner::where('is_online', true)->count();
 
         $pendingMerchantVerifications = Merchant::where('is_verified', false)->count();
-        $pendingRiderVerifications = Rider::where('is_verified', false)->count();
+        $pendingRiderVerifications = DeliveryPartner::where('is_verified', false)->count();
 
         $pendingPayouts = Transaction::where('type', 'payout')
             ->where('status', 'pending')
@@ -108,16 +112,7 @@ class AdminController extends Controller
             ->orderBy('hour')
             ->get();
 
-        // 2. Top Performing Categories
-        $topCategories = OrderItem::join('products', 'order_items.product_id', '=', 'products.id')
-            ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->select('categories.name', DB::raw('SUM(order_items.subtotal) as total_sales'))
-            ->groupBy('categories.id', 'categories.name')
-            ->orderBy('total_sales', 'desc')
-            ->limit(5)
-            ->get();
-
-        // 3. Fast Moving Items
+        // 2. Fast Moving Items
         $fastMoving = OrderItem::select('product_name', DB::raw('SUM(quantity) as total_qty'))
             ->groupBy('product_name')
             ->orderBy('total_qty', 'desc')
@@ -126,7 +121,6 @@ class AdminController extends Controller
 
         return $this->successResponse([
             'hourly_peaks' => $hourlyPeaks,
-            'top_categories' => $topCategories,
             'fast_moving_items' => $fastMoving,
         ], 'Sales analytics retrieved successfully');
     }
@@ -165,27 +159,27 @@ class AdminController extends Controller
     public function deliveryLogistics(Request $request)
     {
         // 1. Rider Status Overview
-        $riderStats = Rider::select('is_online', DB::raw('count(*) as count'))
+        $riderStats = DeliveryPartner::select('is_online', DB::raw('count(*) as count'))
             ->groupBy('is_online')
             ->get();
 
         // 2. Active Deliveries (In Progress)
-        $activeDeliveries = Order::with(['rider.user', 'customer', 'merchant'])
+        $activeDeliveries = Order::with(['deliveryPartner.user', 'customer', 'merchant'])
             ->whereIn('status', ['confirmed', 'processing', 'picked_up', 'out_for_delivery'])
             ->orderBy('updated_at', 'desc')
             ->get();
 
         // 3. Logistics Performance
-        $performance = Rider::select(
-                'riders.id',
+        $performance = DeliveryPartner::select(
+                'delivery_partners.id',
                 'users.name',
-                'riders.rating',
-                'riders.total_deliveries',
+                'delivery_partners.rating',
+                'delivery_partners.total_deliveries',
                 DB::raw('AVG(actual_duration_minutes) as avg_time')
             )
-            ->join('users', 'riders.user_id', '=', 'users.id')
-            ->leftJoin('orders', 'riders.id', '=', 'orders.rider_id')
-            ->groupBy('riders.id', 'users.name', 'riders.rating', 'riders.total_deliveries')
+            ->join('users', 'delivery_partners.user_id', '=', 'users.id')
+            ->leftJoin('orders', 'delivery_partners.id', '=', 'orders.delivery_partner_id')
+            ->groupBy('delivery_partners.id', 'users.name', 'delivery_partners.rating', 'delivery_partners.total_deliveries')
             ->orderBy('avg_time', 'asc')
             ->limit(10)
             ->get();
@@ -207,7 +201,7 @@ class AdminController extends Controller
         ]);
 
         $rule = DeliveryPricingRule::updateOrCreate(
-            ['zone_name' => $request->zone_name],
+            ['zone_name' => $request->input('zone_name')],
             $request->only(['base_fee', 'per_km_fee', 'surge_multiplier', 'min_basket_value_for_free_delivery'])
         );
 
@@ -253,18 +247,18 @@ class AdminController extends Controller
 
     public function orders(Request $request)
     {
-        $query = Order::with(['customer', 'rider.user', 'orderItems']);
+        $query = Order::with(['customer', 'deliveryPartner.user', 'orderItems']);
 
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
         }
 
-        if ($request->has('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->input('date_from'));
         }
 
-        if ($request->has('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->input('date_to'));
         }
 
         $orders = $this->paginateQuery($query, $request, 50, 200);
@@ -277,11 +271,11 @@ class AdminController extends Controller
         $query = Merchant::with('user');
 
         if ($request->has('is_verified')) {
-            $query->where('is_verified', $request->is_verified);
+            $query->where('is_verified', $request->input('is_verified'));
         }
 
-        if ($request->has('city')) {
-            $query->where('city', 'like', '%' . $request->city . '%');
+        if ($request->filled('city')) {
+            $query->where('city', 'like', '%' . $request->input('city') . '%');
         }
 
         $merchants = $this->paginateQuery($query, $request, 50, 200);
@@ -291,18 +285,18 @@ class AdminController extends Controller
 
     public function riders(Request $request)
     {
-        $query = Rider::with('user');
+        $query = DeliveryPartner::with('user');
 
         if ($request->has('is_verified')) {
-            $query->where('is_verified', $request->is_verified);
+            $query->where('is_verified', $request->input('is_verified'));
         }
 
         if ($request->has('is_online')) {
-            $query->where('is_online', $request->is_online);
+            $query->where('is_online', $request->input('is_online'));
         }
 
-        if ($request->has('city')) {
-            $query->where('city', $request->city);
+        if ($request->filled('city')) {
+            $query->where('city', $request->input('city'));
         }
 
         $riders = $this->paginateQuery($query, $request, 50, 200);
@@ -327,11 +321,11 @@ class AdminController extends Controller
 
         try {
             return DB::transaction(function () use ($request) {
-                $user = \App\Models\User::create([
-                    'name' => $request->name,
-                    'phone' => $request->phone,
-                    'email' => $request->email ?? ($request->phone . '@patapoa.com'),
-                    'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                $user = User::create([
+                    'name' => $request->input('name'),
+                    'phone' => $request->input('phone'),
+                    'email' => $request->input('email') ?? ($request->input('phone') . '@patapoa.com'),
+                    'password' => Hash::make($request->input('password')),
                     'user_type' => 'rider',
                     'is_active' => true,
                     'is_verified' => true,
@@ -344,9 +338,9 @@ class AdminController extends Controller
                     'currency' => 'TZS',
                 ]);
 
-                $rider = $user->rider()->create([
-                    'vehicle_type' => $request->vehicle_type,
-                    'city' => $request->city,
+                $rider = $user->deliveryPartner()->create([
+                    'vehicle_type' => $request->input('vehicle_type'),
+                    'city' => $request->input('city'),
                     'is_online' => false,
                     'is_verified' => true,
                 ]);
@@ -360,27 +354,70 @@ class AdminController extends Controller
 
     public function transactions(Request $request)
     {
-        $query = Transaction::with(['user', 'order']);
+        $query = Transaction::with(['user', 'order'])->latest();
 
-        if ($request->has('type')) {
+        // Global Summaries (calculated before pagination)
+        $summary = [
+            'total_sales' => Transaction::where('type', 'payment')->where('status', 'completed')->sum('amount'),
+            'platform_revenue' => Order::whereIn('payment_status', ['paid', 'completed'])->sum('platform_fee'),
+            'pending_payouts' => Transaction::where('type', 'payout')->where('status', 'pending')->sum('amount'),
+            'completed_payouts' => Transaction::where('type', 'payout')->where('status', 'completed')->sum('amount'),
+        ];
+
+        if ($request->has('type') && $request->type != 'all') {
             $query->where('type', $request->type);
         }
 
-        if ($request->has('status')) {
+        if ($request->has('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->has('status') && $request->status != 'all') {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->has('export')) {
+            return $this->exportTransactionsCsv($query->get());
         }
 
-        if ($request->has('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
+        $transactions = $query->paginate(25);
 
-        $transactions = $this->paginateQuery($query, $request, 50, 200);
+        return view('admin.transactions', compact('transactions', 'summary'));
+    }
 
-        return $this->paginatedResponse($transactions, 'Transactions retrieved successfully');
+    protected function exportTransactionsCsv($transactions)
+    {
+        $fileName = 'transactions_' . date('Y-m-d') . '.csv';
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['ID', 'Type', 'User', 'Amount', 'Currency', 'Status', 'Date'];
+
+        $callback = function() use($transactions, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            foreach ($transactions as $t) {
+                fputcsv($file, [
+                    $t->id,
+                    $t->type,
+                    $t->user->name ?? 'System',
+                    $t->amount,
+                    $t->currency,
+                    $t->status,
+                    $t->created_at
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     public function verifyMerchant(Request $request, $id)
@@ -406,7 +443,7 @@ class AdminController extends Controller
 
     public function verifyRider(Request $request, $id)
     {
-        $rider = Rider::with('user')->findOrFail($id);
+        $rider = DeliveryPartner::with('user')->findOrFail($id);
         $rider->update(['is_verified' => true]);
 
         // Clear API caches
@@ -437,11 +474,11 @@ class AdminController extends Controller
         ]);
 
         $data = ['type' => 'marketing'];
-        if ($request->product_id) {
-            $data['product_id'] = $request->product_id;
+        if ($request->input('product_id')) {
+            $data['product_id'] = $request->input('product_id');
         }
 
-        $this->notifications->sendToTopic('all_users', $request->title, $request->body, $data);
+        $this->notifications->sendToTopic('all_users', $request->input('title'), $request->input('body'), $data);
 
         return $this->successResponse(null, 'Broadcast sent successfully');
     }

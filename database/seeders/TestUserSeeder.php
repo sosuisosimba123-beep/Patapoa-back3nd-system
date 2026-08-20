@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Merchant;
-use App\Models\Rider;
+use App\Models\DeliveryPartner;
 use App\Models\Wallet;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -42,7 +42,7 @@ class TestUserSeeder extends Seeder
         );
 
         // Create Rider Profile
-        Rider::updateOrCreate(
+        DeliveryPartner::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'vehicle_type' => 'motorcycle',

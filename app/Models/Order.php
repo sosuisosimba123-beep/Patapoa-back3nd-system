@@ -7,6 +7,47 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string|null $order_number
+ * @property int $customer_id
+ * @property int|null $delivery_partner_id
+ * @property int $address_id
+ * @property string $status
+ * @property string $subtotal
+ * @property string $delivery_fee
+ * @property string $platform_fee
+ * @property string $total
+ * @property string|null $payment_method
+ * @property string $payment_status
+ * @property string|null $payment_reference
+ * @property string|null $customer_notes
+ * @property \Illuminate\Support\Carbon|null $placed_at
+ * @property \Illuminate\Support\Carbon|null $confirmed_at
+ * @property \Illuminate\Support\Carbon|null $assigned_at
+ * @property \Illuminate\Support\Carbon|null $picked_up_at
+ * @property \Illuminate\Support\Carbon|null $delivered_at
+ * @property string|null $pickup_latitude
+ * @property string|null $pickup_longitude
+ * @property string|null $dropoff_latitude
+ * @property string|null $dropoff_longitude
+ * @property string|null $estimated_distance_km
+ * @property string|null $actual_distance_km
+ * @property int|null $estimated_duration_minutes
+ * @property int|null $actual_duration_minutes
+ *
+ * @property-read string $display_id
+ * @property-read float $total_amount
+ * @property-read string|null $delivery_address
+ * @property-read string|null $delivery_notes
+ * @property-read \Illuminate\Support\Collection $items_list
+ *
+ * @property-read \App\Models\User $customer
+ * @property-read \App\Models\DeliveryPartner|null $deliveryPartner
+ * @property-read \App\Models\Address|null $address
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\OrderItem[] $orderItems
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Transaction[] $transactions
+ */
 class Order extends Model
 {
     use HasFactory;
@@ -14,7 +55,7 @@ class Order extends Model
     protected $fillable = [
         'order_number',
         'customer_id',
-        'rider_id',
+        'delivery_partner_id',
         'address_id',
         'status',
         'subtotal',
@@ -62,7 +103,7 @@ class Order extends Model
 
     public function getDisplayIdAttribute(): string
     {
-        return $this->order_number ?? '#' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+        return $this->order_number ?? '#' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
     }
 
     public function getTotalAmountAttribute(): float
@@ -99,9 +140,9 @@ class Order extends Model
         return $this->belongsTo(User::class, 'customer_id');
     }
 
-    public function rider(): BelongsTo
+    public function deliveryPartner(): BelongsTo
     {
-        return $this->belongsTo(Rider::class);
+        return $this->belongsTo(DeliveryPartner::class, 'delivery_partner_id');
     }
 
     public function address(): BelongsTo

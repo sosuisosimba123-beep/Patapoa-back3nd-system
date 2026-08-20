@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Merchant;
-use App\Models\Category;
 use App\Models\User;
 use App\Models\MasterProduct;
 use Illuminate\Support\Facades\Hash;
@@ -73,7 +72,6 @@ class DemoDataSeeder extends Seeder
             Product::updateOrCreate(
                 ['merchant_id' => $merchant->id, 'master_product_id' => $item->id],
                 [
-                    'category_id' => $item->category_id,
                     'price' => rand(1500, 5000),
                     'stock_count' => rand(10, 100),
                     'is_available' => true,

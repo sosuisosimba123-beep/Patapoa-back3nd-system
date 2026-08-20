@@ -4,94 +4,52 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\MasterProduct;
-use App\Models\Category;
+use App\Models\SecondaryCategory;
 use Illuminate\Support\Str;
 
 class MasterProductSeeder extends Seeder
 {
     public function run(): void
     {
-        $categories = [
-            ['name' => 'Dairy & Eggs', 'slug' => 'dairy-eggs'],
-            ['name' => 'Beverages', 'slug' => 'beverages'],
-            ['name' => 'Grains & Flour', 'slug' => 'grains-flour'],
-            ['name' => 'Cooking Essentials', 'slug' => 'cooking-essentials'],
+        $templates = [
+            ['name' => 'Milk (Maziwa)', 'sec' => 'fresh milk & yogurt', 'tags' => ['milk', 'fresh', 'dairy', 'maziwa']],
+            ['name' => 'Yogurt', 'sec' => 'fresh milk & yogurt', 'tags' => ['yogurt', 'dairy']],
+            ['name' => 'Eggs (Mayai)', 'sec' => 'eggs & butter', 'tags' => ['eggs', 'mayai']],
+
+            ['name' => 'Drinking Water', 'sec' => 'water', 'tags' => ['water', 'maji', 'drink']],
+            ['name' => 'Soda / Soft Drink', 'sec' => 'soda & soft drinks', 'tags' => ['soda', 'coke', 'drink', 'soft drink']],
+            ['name' => 'Juice', 'sec' => 'juices', 'tags' => ['juice', 'drink']],
+
+            ['name' => 'Sugar (Sukari)', 'sec' => 'sugar & salt and spices', 'tags' => ['sugar', 'sukari']],
+            ['name' => 'Rice (Mchele)', 'sec' => 'rice & legumes', 'tags' => ['rice', 'mchele']],
+            ['name' => 'Wheat Flour (Ngano)', 'sec' => 'flour & grains', 'tags' => ['flour', 'ngano', 'wheat']],
+            ['name' => 'Maize Flour (Sembe/Dona)', 'sec' => 'flour & grains', 'tags' => ['flour', 'sembe', 'dona', 'maize']],
+
+            ['name' => 'Cooking Oil (Mafuta)', 'sec' => 'cooking oil & fats', 'tags' => ['oil', 'cooking', 'mafuta']],
+            ['name' => 'Salt (Chumvi)', 'sec' => 'sugar & salt and spices', 'tags' => ['salt', 'chumvi']],
+
+            ['name' => 'Bread (Mkate)', 'sec' => 'biscuits & cookies', 'tags' => ['bread', 'mkate', 'bakery']], // Closest match in snacks
+
+            ['name' => 'Biscuits', 'sec' => 'biscuits & cookies', 'tags' => ['biscuits', 'snacks']],
+            ['name' => 'Potato Chips', 'sec' => 'crisps & cereals', 'tags' => ['chips', 'snacks']],
+
+            ['name' => 'Laundry Detergent', 'sec' => 'detergent & soap', 'tags' => ['detergent', 'soap', 'washing']],
+            ['name' => 'Dish Soap', 'sec' => 'detergent & soap', 'tags' => ['soap', 'dish']],
         ];
 
-        foreach ($categories as $cat) {
-            Category::firstOrCreate(['slug' => $cat['slug']], $cat);
-        }
+        foreach ($templates as $t) {
+            $sec = SecondaryCategory::where('name', $t['sec'])->first();
 
-        $dairyId = Category::where('slug', 'dairy-eggs')->first()->id;
-        $beveragesId = Category::where('slug', 'beverages')->first()->id;
-        $grainsId = Category::where('slug', 'grains-flour')->first()->id;
-        $cookingId = Category::where('slug', 'cooking-essentials')->first()->id;
-
-        $masterProducts = [
-            // GENERIC / UNBRANDED (Used for Search Hero Images)
-            [
-                'category_id' => $dairyId,
-                'name' => 'Milk',
-                'brand' => 'Generic',
-                'unit' => 'Pack',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1550583724-125581cc255b?q=80&w=800&auto=format&fit=crop',
-                'search_tags' => ['milk', 'fresh', 'dairy', 'maziwa'],
-            ],
-            [
-                'category_id' => $beveragesId,
-                'name' => 'Drinking Water',
-                'brand' => 'Generic',
-                'unit' => 'Bottle',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1523362628744-0c100150b504?q=80&w=800&auto=format&fit=crop',
-                'search_tags' => ['water', 'maji', 'drink'],
-            ],
-            [
-                'category_id' => $cookingId,
-                'name' => 'Cooking Oil',
-                'brand' => 'Generic',
-                'unit' => 'Litre',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?q=80&w=800&auto=format&fit=crop',
-                'search_tags' => ['oil', 'cooking', 'mafuta'],
-            ],
-            [
-                'category_id' => $grainsId,
-                'name' => 'Wheat Flour',
-                'brand' => 'Generic',
-                'unit' => 'kg',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=800&auto=format&fit=crop',
-                'search_tags' => ['flour', 'ngano', 'wheat'],
-            ],
-            [
-                'category_id' => $cookingId,
-                'name' => 'Sugar',
-                'brand' => 'Generic',
-                'unit' => 'kg',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1581447100512-4213d283626d?q=80&w=800&auto=format&fit=crop',
-                'search_tags' => ['sugar', 'sukari'],
-            ],
-
-            // BRANDED EXAMPLES (For Merchant Onboarding Selection)
-            [
-                'category_id' => $dairyId,
-                'name' => 'Fresh Milk',
-                'brand' => 'Asas',
-                'unit' => '500ml',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1550583724-125581cc255b?q=80&w=200&auto=format&fit=crop',
-                'search_tags' => ['milk', 'fresh', 'dairy', 'asas'],
-            ],
-            [
-                'category_id' => $dairyId,
-                'name' => 'UHT Milk',
-                'brand' => 'Azam',
-                'unit' => '1L',
-                'primary_image_url' => 'https://images.unsplash.com/photo-1563636619-e910f6401b9d?q=80&w=200&auto=format&fit=crop',
-                'search_tags' => ['milk', 'uht', 'dairy', 'azam'],
-            ],
-        ];
-
-        foreach ($masterProducts as $product) {
-            $product['slug'] = Str::slug($product['brand'] . '-' . $product['name'] . '-' . $product['unit']);
-            MasterProduct::updateOrCreate(['slug' => $product['slug']], $product);
+            MasterProduct::updateOrCreate(
+                ['slug' => Str::slug($t['name'])],
+                [
+                    'secondary_category_id' => $sec?->id,
+                    'name' => $t['name'],
+                    'brand' => 'Generic',
+                    'primary_image_url' => '', // Purely uses 3D fallbacks
+                    'search_tags' => $t['tags'],
+                ]
+            );
         }
     }
 }

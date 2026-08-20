@@ -30,9 +30,13 @@ return new class extends Migration
 
         // Modify products table to link to master_products
         Schema::table('products', function (Blueprint $table) {
-            $table->foreignId('master_product_id')->nullable()->after('category_id')->constrained('master_products')->onDelete('cascade');
+            if (!Schema::hasColumn('products', 'master_product_id')) {
+                $table->foreignId('master_product_id')->nullable()->after('category_id')->constrained('master_products')->onDelete('cascade');
+            }
+
+            // Use portable Schema builder instead of raw MySQL 'MODIFY'
             $table->string('name')->nullable()->change();
-            $table->string('images')->nullable()->change();
+            $table->json('images')->nullable()->change();
         });
     }
 

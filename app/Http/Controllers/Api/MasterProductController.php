@@ -13,7 +13,7 @@ class MasterProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MasterProduct::with('category');
+        $query = MasterProduct::with('secondaryCategory.primaryCategory');
 
         if ($request->has('q')) {
             $q = $request->q;
@@ -24,9 +24,18 @@ class MasterProductController extends Controller
             });
         }
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if ($request->has('secondary_category_id')) {
+            $query->where('secondary_category_id', $request->secondary_category_id);
         }
+
+        if ($request->has('primary_category_id')) {
+            $query->whereHas('secondaryCategory', function($q) use ($request) {
+                $q->where('primary_category_id', $request->primary_category_id);
+            });
+        }
+
+        // Prioritize Generic/Template products so they appear first for merchants
+        $query->orderByRaw("CASE WHEN brand = 'Generic' THEN 0 ELSE 1 END");
 
         $products = $this->paginateQuery($query, $request, 50, 200);
 
@@ -35,7 +44,13 @@ class MasterProductController extends Controller
 
     public function show($id)
     {
-        $product = MasterProduct::with(['category', 'listings.merchant'])->findOrFail($id);
+        $product = MasterProduct::with(['secondaryCategory.primaryCategory', 'listings.merchant'])->findOrFail($id);
         return $this->successResponse($product, 'Master product details retrieved');
+    }
+
+    public function showByBarcode($barcode)
+    {
+        $product = MasterProduct::with('secondaryCategory.primaryCategory')->where('barcode', $barcode)->firstOrFail();
+        return $this->successResponse($product, 'Master product found');
     }
 }

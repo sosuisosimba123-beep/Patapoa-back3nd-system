@@ -74,7 +74,7 @@
             </div>
         </div>
         <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Suspended Accounts</p>
-        <h3 class="text-3xl font-black text-on-surface">0</h3>
+        <h3 class="text-3xl font-black text-on-surface">{{ $suspendedCount }}</h3>
     </div>
 </div>
 

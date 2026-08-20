@@ -10,14 +10,10 @@ return new class extends Migration
     {
         Schema::table('merchants', function (Blueprint $table) {
             $table->index(['latitude', 'longitude']);
-            $table->index('is_verified');
-            $table->index('is_online');
+            // is_verified and is_online already indexed in 2026_06_28_100000_add_performance_indexes.php
         });
 
-        Schema::table('products', function (Blueprint $table) {
-            $table->index('is_available');
-            $table->index('price');
-        });
+        // products indexes (is_available, price) already indexed in 2026_06_28_100000_add_performance_indexes.php
 
         Schema::table('search_logs', function (Blueprint $table) {
             $table->index('query');
@@ -29,13 +25,6 @@ return new class extends Migration
     {
         Schema::table('merchants', function (Blueprint $table) {
             $table->dropIndex(['latitude', 'longitude']);
-            $table->dropIndex(['is_verified']);
-            $table->dropIndex(['is_online']);
-        });
-
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropIndex(['is_available']);
-            $table->dropIndex(['price']);
         });
 
         Schema::table('search_logs', function (Blueprint $table) {

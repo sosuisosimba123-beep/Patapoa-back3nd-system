@@ -10,14 +10,24 @@
         <p class="text-on-surface-variant font-medium">Comprehensive financial record of platform commerce.</p>
     </div>
     <div class="flex gap-2">
-        <button class="flex items-center gap-2 px-6 py-2 rounded-xl border border-outline bg-white hover:bg-surface-container transition-colors font-bold">
-            <span class="material-symbols-outlined text-[18px]">filter_list</span>
-            Filter
-        </button>
-        <button class="flex items-center gap-2 px-6 py-2 rounded-xl bg-primary text-on-primary hover:opacity-90 transition-opacity font-bold">
+        <form action="{{ route('admin.transactions') }}" method="GET" class="flex gap-2">
+            <select name="type" onchange="this.form.submit()" class="px-4 py-2 rounded-xl border border-outline bg-white font-bold text-xs">
+                <option value="all">All Types</option>
+                <option value="payment" {{ request('type') == 'payment' ? 'selected' : '' }}>Payments</option>
+                <option value="payout" {{ request('type') == 'payout' ? 'selected' : '' }}>Payouts</option>
+                <option value="earning" {{ request('type') == 'earning' ? 'selected' : '' }}>Earnings</option>
+            </select>
+            <select name="status" onchange="this.form.submit()" class="px-4 py-2 rounded-xl border border-outline bg-white font-bold text-xs">
+                <option value="all">All Status</option>
+                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                <option value="failed" {{ request('status') == 'failed' ? 'selected' : '' }}>Failed</option>
+            </select>
+        </form>
+        <a href="{{ route('admin.transactions', array_merge(request()->all(), ['export' => 1])) }}" class="flex items-center gap-2 px-6 py-2 rounded-xl bg-primary text-on-primary hover:opacity-90 transition-opacity font-bold">
             <span class="material-symbols-outlined text-[18px]">download</span>
             Export CSV
-        </button>
+        </a>
     </div>
 </div>
 
@@ -29,17 +39,16 @@
             <span class="material-symbols-outlined text-primary">payments</span>
         </div>
         <div>
-            <p class="text-2xl font-black text-on-surface">TZS {{ number_format($transactions->where('type', 'payment')->where('status', 'completed')->sum('amount')) }}</p>
+            <p class="text-2xl font-black text-on-surface">TZS {{ number_format($summary['total_sales']) }}</p>
         </div>
     </div>
     <div class="bg-primary-container/10 p-6 rounded-xl shadow-sm border border-primary-container flex flex-col justify-between hover:shadow-md transition-shadow">
         <div class="flex justify-between">
-            <span class="text-xs uppercase tracking-widest text-on-primary-container font-bold">Platform Revenue</span>
+            <span class="text-xs uppercase tracking-widest text-on-primary-container font-bold">Platform Revenue (5% Net)</span>
             <span class="material-symbols-outlined text-primary">account_balance_wallet</span>
         </div>
         <div>
-            @php $platformRevenue = $transactions->where('type', 'payment')->where('status', 'completed')->sum('amount') * 0.05 @endphp
-            <p class="text-2xl font-black text-primary">TZS {{ number_format($platformRevenue) }}</p>
+            <p class="text-2xl font-black text-primary">TZS {{ number_format($summary['platform_revenue']) }}</p>
         </div>
     </div>
     <div class="bg-white p-6 rounded-xl shadow-sm border border-outline-variant flex flex-col justify-between hover:shadow-md transition-shadow">
@@ -48,16 +57,16 @@
             <span class="material-symbols-outlined text-secondary">hourglass_empty</span>
         </div>
         <div>
-            <p class="text-2xl font-black text-on-surface">TZS {{ number_format($transactions->where('type', 'payout')->where('status', 'pending')->sum('amount')) }}</p>
+            <p class="text-2xl font-black text-on-surface">TZS {{ number_format($summary['pending_payouts']) }}</p>
         </div>
     </div>
     <div class="bg-white p-6 rounded-xl shadow-sm border border-outline-variant flex flex-col justify-between hover:shadow-md transition-shadow">
         <div class="flex justify-between">
-            <span class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Settlements</span>
-            <span class="material-symbols-outlined text-error">local_shipping</span>
+            <span class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Settled Payouts</span>
+            <span class="material-symbols-outlined text-error">check_circle</span>
         </div>
         <div>
-            <p class="text-2xl font-black text-error">TZS 0</p>
+            <p class="text-2xl font-black text-green-600">TZS {{ number_format($summary['completed_payouts']) }}</p>
         </div>
     </div>
 </div>

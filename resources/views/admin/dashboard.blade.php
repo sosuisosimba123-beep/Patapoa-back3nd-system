@@ -13,8 +13,20 @@
             </div>
         </div>
         <div class="mt-4">
-            <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Total Platform Revenue</p>
+            <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Total Gross Sales</p>
             <h2 class="text-xl font-black mt-1 text-on-surface">TSH {{ number_format($stats['total_revenue']) }}</h2>
+        </div>
+    </div>
+    <!-- Platform Earnings Card -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-outline-variant flex flex-col justify-between group hover:border-green-500 transition-colors">
+        <div class="flex justify-between items-start">
+            <div class="p-2 bg-green-500/10 rounded-lg text-green-600">
+                <span class="material-symbols-outlined">account_balance</span>
+            </div>
+        </div>
+        <div class="mt-4">
+            <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Platform Earnings (5%)</p>
+            <h2 class="text-xl font-black mt-1 text-green-600">TSH {{ number_format($stats['platform_earnings']) }}</h2>
         </div>
     </div>
     <!-- Active Deliveries -->
@@ -34,18 +46,6 @@
         <div class="mt-4">
             <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Active Riders</p>
             <h2 class="text-xl font-black mt-1 text-on-surface">{{ $stats['active_riders'] }} on duty</h2>
-        </div>
-    </div>
-    <!-- New Merchants -->
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-outline-variant flex flex-col justify-between group hover:border-primary transition-colors">
-        <div class="flex justify-between items-start">
-            <div class="p-2 bg-secondary/10 rounded-lg text-secondary">
-                <span class="material-symbols-outlined">person_add</span>
-            </div>
-        </div>
-        <div class="mt-4">
-            <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">New Merchant Signups</p>
-            <h2 class="text-xl font-black mt-1 text-on-surface">{{ $stats['new_merchants'] }} today</h2>
         </div>
     </div>
     <!-- Pending Payouts -->

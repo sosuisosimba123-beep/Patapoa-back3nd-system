@@ -4,10 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Merchant;
-use App\Models\Rider;
+use App\Models\DeliveryPartner;
 use App\Models\Wallet;
 use App\Models\Product;
-use App\Models\Category;
+use App\Models\SecondaryCategory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -48,12 +48,12 @@ class DummyTestingSeeder extends Seeder
         );
 
         // Add some products to the Merchant
-        $category = Category::first() ?? Category::create(['name' => 'General', 'slug' => 'general']);
+        $sec = SecondaryCategory::where('name', 'flour & grains')->first();
 
         Product::updateOrCreate(
             ['merchant_id' => $merchant->id, 'name' => 'Test Item 1'],
             [
-                'category_id' => $category->id,
+                'secondary_category_id' => $sec?->id,
                 'description' => 'Testing product for order flow',
                 'price' => 15000,
                 'stock_count' => 100,
@@ -64,7 +64,7 @@ class DummyTestingSeeder extends Seeder
         Product::updateOrCreate(
             ['merchant_id' => $merchant->id, 'name' => 'Test Item 2'],
             [
-                'category_id' => $category->id,
+                'secondary_category_id' => $sec?->id,
                 'description' => 'Another testing product',
                 'price' => 25000,
                 'stock_count' => 50,
@@ -85,7 +85,7 @@ class DummyTestingSeeder extends Seeder
             ]
         );
 
-        Rider::updateOrCreate(
+        DeliveryPartner::updateOrCreate(
             ['user_id' => $riderUser->id],
             [
                 'vehicle_type' => 'motorcycle',

@@ -39,6 +39,10 @@
                     <input type="number" step="0.1" name="surge_multiplier" value="1.0" class="w-full p-2 border rounded-lg mt-1">
                 </div>
                 <div>
+                    <label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Max Distance (KM)</label>
+                    <input type="number" step="0.5" name="max_distance" value="15.0" class="w-full p-2 border rounded-lg mt-1">
+                </div>
+                <div class="col-span-2">
                     <label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Free Over (TSH)</label>
                     <input type="number" name="min_basket_value_for_free_delivery" placeholder="Optional" class="w-full p-2 border rounded-lg mt-1">
                 </div>
@@ -55,7 +59,7 @@
                 <div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant flex justify-between items-center">
                     <div>
                         <p class="font-bold">{{ $rule->zone_name }}</p>
-                        <p class="text-xs text-on-surface-variant">Base: {{ number_format($rule->base_fee) }} • KM: {{ number_format($rule->per_km_fee) }}</p>
+                        <p class="text-xs text-on-surface-variant">Base: {{ number_format($rule->base_fee) }} • KM: {{ number_format($rule->per_km_fee) }} • Max: {{ $rule->max_distance }}km</p>
                     </div>
                     <div class="text-right">
                         <span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded">x{{ $rule->surge_multiplier }}</span>
@@ -74,33 +78,56 @@
         </h3>
 
         <div class="space-y-4">
+            @forelse($pricingRules as $rule)
             <div class="p-4 bg-surface-container rounded-xl">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold">Dar es Salaam</span>
-                    <span class="text-xs font-bold text-primary">25 KM Radius</span>
+                    <span class="font-bold">{{ $rule->zone_name }}</span>
+                    <span class="text-xs font-bold text-primary">{{ $rule->max_distance }} KM Radius</span>
                 </div>
                 <div class="w-full bg-outline-variant h-2 rounded-full overflow-hidden">
-                    <div class="bg-primary h-full w-[80%]"></div>
+                    <div class="bg-primary h-full" style="width: {{ min(($rule->max_distance / 30) * 100, 100) }}%"></div>
                 </div>
             </div>
-            <div class="p-4 bg-surface-container rounded-xl">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold">Moshi</span>
-                    <span class="text-xs font-bold text-secondary">15 KM Radius</span>
-                </div>
-                <div class="w-full bg-outline-variant h-2 rounded-full overflow-hidden">
-                    <div class="bg-secondary h-full w-[60%]"></div>
-                </div>
-            </div>
+            @empty
+            <p class="text-on-surface-variant italic">No operational zones configured.</p>
+            @endforelse
         </div>
 
         <div class="mt-12 p-6 bg-tertiary/10 rounded-2xl border border-tertiary/20">
-            <h4 class="font-black text-tertiary flex items-center gap-2 mb-2">
-                <span class="material-symbols-outlined">info</span>
-                Platform Fee Notice
+            <h4 class="font-black text-tertiary flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined">payments</span>
+                Commission & Platform Fees
             </h4>
-            <p class="text-sm text-on-surface-variant">
-                The platform currenty deducts a flat <span class="font-bold text-tertiary">5% commission</span> from both merchants and riders on every successful transaction.
+
+            <form action="{{ route('admin.settings.platform') }}" method="POST" class="space-y-4">
+                @csrf
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Default Merchant Commission (%)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" step="0.1" name="merchant_commission_rate" value="{{ ($platformSettings['merchant_commission_rate'] ?? 0.05) * 100 }}" class="w-full p-2 border rounded-lg mt-1">
+                            <span class="font-bold text-on-surface-variant">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Rider Fee Commission (%)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" step="0.1" name="rider_commission_rate" value="{{ ($platformSettings['rider_commission_rate'] ?? 0.05) * 100 }}" class="w-full p-2 border rounded-lg mt-1">
+                            <span class="font-bold text-on-surface-variant">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Fixed Convenience Fee (TSH)</label>
+                        <input type="number" name="convenience_fee" value="{{ $platformSettings['convenience_fee'] ?? 0 }}" class="w-full p-2 border rounded-lg mt-1">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-tertiary text-on-tertiary font-bold py-3 rounded-xl mt-4 shadow-md hover:bg-tertiary/90 transition-all">
+                    Update Commission Rates
+                </button>
+            </form>
+
+            <p class="text-xs text-on-surface-variant mt-4 italic">
+                Note: Individual merchants can have custom commission overrides set in their profiles.
             </p>
         </div>
     </div>

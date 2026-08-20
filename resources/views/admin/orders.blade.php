@@ -17,7 +17,8 @@
                 <tr class="bg-surface-container-highest border-b border-outline-variant">
                     <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Order ID</th>
                     <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Customer</th>
-                    <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Total</th>
+                    <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant text-right">Net Platform Fee</th>
+                    <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant text-right">Total</th>
                     <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Payment</th>
                     <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Status</th>
                     <th class="px-6 py-3 text-xs font-bold uppercase tracking-widest text-on-surface-variant text-center">Actions</th>
@@ -28,7 +29,8 @@
                 <tr class="hover:bg-primary/5 transition-colors">
                     <td class="px-6 py-4 text-sm font-bold text-primary">{{ $order->display_id }}</td>
                     <td class="px-6 py-4 text-sm">{{ $order->customer->name ?? 'Unknown' }}</td>
-                    <td class="px-6 py-4 text-sm font-black">TZS {{ number_format($order->total) }}</td>
+                    <td class="px-6 py-4 text-sm font-bold text-right text-green-600">TZS {{ number_format($order->platform_fee) }}</td>
+                    <td class="px-6 py-4 text-sm font-black text-right">TZS {{ number_format($order->total) }}</td>
                     <td class="px-6 py-4">
                         <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
                             {{ $order->payment_status }}

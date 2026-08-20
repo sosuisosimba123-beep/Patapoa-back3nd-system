@@ -47,7 +47,7 @@
                 </div>
                 <div>
                     <h4 class="font-bold">Order {{ $delivery->display_id }}</h4>
-                    <p class="text-xs text-on-surface-variant">Rider: {{ $delivery->rider->user->name ?? 'Assigning...' }}</p>
+                    <p class="text-xs text-on-surface-variant">Partner: {{ $delivery->deliveryPartner->user->name ?? 'Assigning...' }}</p>
                 </div>
             </div>
             <div class="text-right">
@@ -88,21 +88,21 @@
             </div>
         </div>
         <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Online Now</p>
-        <p class="text-3xl font-black text-on-surface mt-1">{{ \App\Models\Rider::where('is_online', true)->count() }}</p>
+        <p class="text-3xl font-black text-on-surface mt-1">{{ \App\Models\DeliveryPartner::where('is_online', true)->count() }}</p>
     </div>
     <div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant shadow-sm transition-transform hover:-translate-y-1">
         <div class="flex justify-between items-start mb-2">
             <span class="material-symbols-outlined text-secondary text-3xl">star</span>
         </div>
         <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Average Rating</p>
-        <p class="text-3xl font-black text-on-surface mt-1">4.8</p>
+        <p class="text-3xl font-black text-on-surface mt-1">{{ number_format($avgRating, 1) }}</p>
     </div>
     <div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant shadow-sm transition-transform hover:-translate-y-1">
         <div class="flex justify-between items-start mb-2">
             <span class="material-symbols-outlined text-error text-3xl">payments</span>
         </div>
         <p class="text-xs uppercase tracking-widest text-on-surface-variant font-bold">Total Debt</p>
-        <p class="text-3xl font-black text-error mt-1">TSH 0</p>
+        <p class="text-3xl font-black text-error mt-1">TSH {{ number_format($totalDebt) }}</p>
     </div>
 </div>
 
@@ -118,7 +118,15 @@
                 @endif
             </div>
             <div class="flex-1">
-                <h3 class="text-lg font-black text-on-surface">{{ $rider->user->name ?? 'Unknown Rider' }}</h3>
+                <div class="flex justify-between items-start">
+                    <h3 class="text-lg font-black text-on-surface">{{ $rider->user->name ?? 'Unknown Rider' }}</h3>
+                    <form action="{{ route('admin.users.toggle-status', $rider->user_id) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="material-symbols-outlined p-1 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors {{ !$rider->user->is_active ? 'text-error' : '' }}" title="{{ $rider->user->is_active ? 'Suspend Rider' : 'Activate Rider' }}">
+                            {{ $rider->user->is_active ? 'person_check' : 'person_off' }}
+                        </button>
+                    </form>
+                </div>
                 <div class="flex items-center gap-1 mt-1">
                     <span class="material-symbols-outlined text-xs text-on-surface-variant">{{ $rider->vehicle_type === 'car' ? 'directions_car' : ($rider->vehicle_type === 'bicycle' ? 'pedal_bike' : 'motorcycle') }}</span>
                     <span class="text-sm text-on-surface-variant capitalize">{{ $rider->vehicle_type }}</span>
@@ -133,16 +141,25 @@
             <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest {{ $rider->is_online ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary' }}">
                 {{ $rider->is_online ? 'Available' : 'Offline' }}
             </span>
-            <span class="px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">
-                ID: PAT-R-{{ $rider->id }}
+            @if(!$rider->is_verified)
+            <form action="{{ route('admin.riders.verify', $rider->id) }}" method="POST">
+                @csrf
+                <button type="submit" class="px-3 py-1 bg-tertiary text-on-tertiary text-[10px] font-bold rounded-full shadow hover:brightness-95">
+                    VERIFY NOW
+                </button>
+            </form>
+            @else
+            <span class="px-3 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-bold border border-primary/10 uppercase tracking-widest">
+                VERIFIED
             </span>
+            @endif
         </div>
         <div class="border-t border-outline-variant pt-4 flex justify-between items-center">
             <div>
                 <p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Completed Trips</p>
                 <p class="text-lg font-black text-on-surface">{{ $rider->orders_count }}</p>
             </div>
-            <button class="material-symbols-outlined p-2 hover:bg-surface-container-high rounded-full transition-colors">more_vert</button>
+            <a href="{{ route('admin.transactions', ['type' => 'earning', 'user_id' => $rider->user_id]) }}" class="text-primary text-[10px] font-bold uppercase tracking-widest hover:underline">View Ledger</a>
         </div>
     </div>
     @endforeach
