@@ -93,7 +93,7 @@
                 <span class="material-symbols-outlined">contact_support</span>
                 <span class="text-sm">Support</span>
             </a>
-            <form action="{{ route('auth.logout') }}" method="POST">
+            <form action="{{ route('admin.logout') }}" method="POST">
                 @csrf
                 <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-on-surface-variant font-medium hover:bg-surface-container-highest">
                     <span class="material-symbols-outlined">logout</span>
