@@ -125,6 +125,27 @@
 
         <!-- Page Content -->
         <div class="p-6 space-y-6">
+            @if(session('error'))
+                <div class="bg-red-500/10 border border-red-500/50 text-red-500 px-6 py-4 rounded-2xl flex items-center gap-3">
+                    <span class="material-symbols-outlined">error</span>
+                    <span class="text-sm font-bold">{{ session('error') }}</span>
+                </div>
+            @endif
+
+            @if(session('success'))
+                <div class="bg-emerald-500/10 border border-emerald-500/50 text-emerald-500 px-6 py-4 rounded-2xl flex items-center gap-3">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <span class="text-sm font-bold">{{ session('success') }}</span>
+                </div>
+            @endif
+
+            @if(session('warning'))
+                <div class="bg-amber-500/10 border border-amber-500/50 text-amber-500 px-6 py-4 rounded-2xl flex items-center gap-3">
+                    <span class="material-symbols-outlined">warning</span>
+                    <span class="text-sm font-bold">{{ session('warning') }}</span>
+                </div>
+            @endif
+
             @yield('content')
         </div>
     </main>

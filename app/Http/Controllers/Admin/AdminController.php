@@ -178,23 +178,31 @@ class AdminController extends Controller
 
     public function orders()
     {
-        $orders = Order::with(['customer'])
-            ->latest()
-            ->paginate(20);
+        try {
+            $orders = Order::with(['customer'])
+                ->latest()
+                ->paginate(20);
 
-        return view('admin.orders', compact('orders'));
+            return view('admin.orders', compact('orders'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.dashboard')->with('error', 'Orders database is currently unreachable.');
+        }
     }
 
     public function merchants()
     {
-        $merchants = Merchant::with(['user'])
-            ->withCount('orders')
-            ->latest()
-            ->paginate(15);
+        try {
+            $merchants = Merchant::with(['user'])
+                ->withCount('orders')
+                ->latest()
+                ->paginate(15);
 
-        $suspendedCount = User::where('user_type', 'merchant')->where('is_active', false)->count();
+            $suspendedCount = User::where('user_type', 'merchant')->where('is_active', false)->count();
 
-        return view('admin.merchants', compact('merchants', 'suspendedCount'));
+            return view('admin.merchants', compact('merchants', 'suspendedCount'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.dashboard')->with('error', 'Merchants database is currently unreachable.');
+        }
     }
 
     public function verifyMerchant($id)
@@ -215,20 +223,24 @@ class AdminController extends Controller
 
     public function deliveries()
     {
-        $riders = DeliveryPartner::with(['user'])
-            ->withCount('orders')
-            ->latest()
-            ->paginate(15);
+        try {
+            $riders = DeliveryPartner::with(['user'])
+                ->withCount('orders')
+                ->latest()
+                ->paginate(15);
 
-        $activeDeliveries = Order::with(['deliveryPartner.user', 'customer', 'merchant'])
-            ->whereIn('status', ['confirmed', 'processing', 'picked_up', 'out_for_delivery'])
-            ->orderBy('updated_at', 'desc')
-            ->get();
+            $activeDeliveries = Order::with(['deliveryPartner.user', 'customer', 'merchant'])
+                ->whereIn('status', ['confirmed', 'processing', 'picked_up', 'out_for_delivery'])
+                ->orderBy('updated_at', 'desc')
+                ->get();
 
-        $avgRating = DeliveryPartner::avg('rating') ?? 0;
-        $totalDebt = 0; // Placeholder for future implementation
+            $avgRating = DeliveryPartner::avg('rating') ?? 0;
+            $totalDebt = 0; // Placeholder for future implementation
 
-        return view('admin.deliveries', compact('riders', 'activeDeliveries', 'avgRating', 'totalDebt'));
+            return view('admin.deliveries', compact('riders', 'activeDeliveries', 'avgRating', 'totalDebt'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.dashboard')->with('error', 'Deliveries database is currently unreachable.');
+        }
     }
 
     public function storeRider(Request $request)
@@ -375,35 +387,39 @@ class AdminController extends Controller
 
     public function transactions(Request $request)
     {
-        $query = Transaction::with(['user', 'order'])->latest();
+        try {
+            $query = Transaction::with(['user', 'order'])->latest();
 
-        // Global Summaries (calculated before pagination)
-        $summary = [
-            'total_sales' => Transaction::where('type', 'payment')->where('status', 'completed')->sum('amount'),
-            'platform_revenue' => Order::whereIn('payment_status', ['paid', 'completed'])->sum('platform_fee'),
-            'pending_payouts' => Transaction::where('type', 'payout')->where('status', 'pending')->sum('amount'),
-            'completed_payouts' => Transaction::where('type', 'payout')->where('status', 'completed')->sum('amount'),
-        ];
+            // Global Summaries (calculated before pagination)
+            $summary = [
+                'total_sales' => Transaction::where('type', 'payment')->where('status', 'completed')->sum('amount'),
+                'platform_revenue' => Order::whereIn('payment_status', ['paid', 'completed'])->sum('platform_fee'),
+                'pending_payouts' => Transaction::where('type', 'payout')->where('status', 'pending')->sum('amount'),
+                'completed_payouts' => Transaction::where('type', 'payout')->where('status', 'completed')->sum('amount'),
+            ];
 
-        if ($request->has('type') && $request->type != 'all') {
-            $query->where('type', $request->type);
+            if ($request->has('type') && $request->type != 'all') {
+                $query->where('type', $request->type);
+            }
+
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+
+            if ($request->has('status') && $request->status != 'all') {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('export')) {
+                return $this->exportTransactionsCsv($query->get());
+            }
+
+            $transactions = $query->paginate(25);
+
+            return view('admin.transactions', compact('transactions', 'summary'));
+        } catch (\Exception $e) {
+            return redirect()->route('admin.dashboard')->with('error', 'Transactions database is currently unreachable.');
         }
-
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
-        }
-
-        if ($request->has('status') && $request->status != 'all') {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('export')) {
-            return $this->exportTransactionsCsv($query->get());
-        }
-
-        $transactions = $query->paginate(25);
-
-        return view('admin.transactions', compact('transactions', 'summary'));
     }
 
     protected function exportTransactionsCsv($transactions)
@@ -479,26 +495,30 @@ class AdminController extends Controller
 
     public function security()
     {
-        $alerts = SecurityAlert::where('status', '!=', 'resolved')->latest()->take(10)->get();
+        try {
+            $alerts = SecurityAlert::where('status', '!=', 'resolved')->latest()->take(10)->get();
 
-        // Mocking some data if table is empty for first view
-        if ($alerts->isEmpty()) {
-            $alerts = collect([
-                new SecurityAlert([
-                    'id' => 0,
+            // Mocking some data if table is empty for first view
+            if ($alerts->isEmpty()) {
+                $mockAlert = new SecurityAlert([
                     'type' => 'critical',
                     'title' => 'Someone is poking at the admin pages',
                     'description' => 'An attacker is trying lots of hidden web addresses on the site, hunting for a way in.',
                     'source_ip' => '32.122.195.63',
                     'status' => 'active'
-                ])
-            ]);
+                ]);
+                $mockAlert->id = 0; // Explicitly set ID for the route helper
+                $alerts = collect([$mockAlert]);
+            }
+
+            $systemsWatched = 8;
+            $activeAlertsCount = SecurityAlert::where('status', 'active')->count() ?: 1;
+
+            return view('admin.security', compact('alerts', 'systemsWatched', 'activeAlertsCount'));
+        } catch (\Exception $e) {
+            Log::error('Security Hub Error: ' . $e->getMessage());
+            return redirect()->route('admin.dashboard')->with('error', 'Security system currently unavailable.');
         }
-
-        $systemsWatched = 8;
-        $activeAlertsCount = SecurityAlert::where('status', 'active')->count() ?: 1;
-
-        return view('admin.security', compact('alerts', 'systemsWatched', 'activeAlertsCount'));
     }
 
     public function resolveSecurityAlert($id)
