@@ -4,12 +4,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController;
 
 Route::get('/', function () {
-    return redirect()->route('admin.dashboard');
+    return view('patapoa.online');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    // Public routes
+    // Public login gateway
     Route::get('/login', [AdminController::class, 'showLoginForm'])->name('login');
+
+    // Auth logic
+    Route::post('/authenticate', [AdminController::class, 'authenticateViaPocketBase'])->name('authenticate');
     Route::get('/verify', [AdminController::class, 'handlePocketBaseRedirect'])->name('verify');
     Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 

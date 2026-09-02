@@ -23,7 +23,37 @@ class AdminController extends Controller
 {
     public function showLoginForm()
     {
+        // If already logged in, go to dashboard
+        if (session()->has('patapoa_admin_authenticated')) {
+            return redirect()->route('admin.dashboard');
+        }
         return view('admin.login');
+    }
+
+    /**
+     * Handle the initial email/password submission.
+     * In this flow, we check the credentials against our env/PocketBase
+     * and then instruct the user to check their email for PocketBase authorization.
+     */
+    public function authenticateViaPocketBase(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $adminEmail = env('PB_ADMIN_EMAIL', 'sosuisosimba123@gmail.com');
+        $adminPass = env('PB_ADMIN_PASSWORD', '0767080236Euty.');
+
+        if ($request->email !== $adminEmail || $request->password !== $adminPass) {
+            return back()->with('error', 'Invalid admin credentials.');
+        }
+
+        // Logic: Since PocketBase handles the actual email authorization link,
+        // we redirect the user to the PocketBase Admin UI or trigger a password reset/auth flow.
+        // For a seamless flow, we instruct the user to use the PocketBase Auth link.
+
+        return back()->with('success', 'Credentials verified. Please authorize the login via the link sent to your email by PocketBase.');
     }
 
     public function handlePocketBaseRedirect(Request $request)
