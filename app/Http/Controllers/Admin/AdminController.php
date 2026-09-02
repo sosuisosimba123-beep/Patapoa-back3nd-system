@@ -14,10 +14,13 @@ use App\Models\DeliveryPricingRule;
 use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\SecurityAlert;
+use App\Mail\AdminLoginVerification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AdminController extends Controller
 {
@@ -32,8 +35,6 @@ class AdminController extends Controller
 
     /**
      * Handle the initial email/password submission.
-     * In this flow, we check the credentials against our env/PocketBase
-     * and then instruct the user to check their email for PocketBase authorization.
      */
     public function authenticateViaPocketBase(Request $request)
     {
@@ -49,27 +50,42 @@ class AdminController extends Controller
             return back()->with('error', 'Invalid admin credentials.');
         }
 
-        // Logic: Since PocketBase handles the actual email authorization link,
-        // we redirect the user to the PocketBase Admin UI or trigger a password reset/auth flow.
-        // For a seamless flow, we instruct the user to use the PocketBase Auth link.
+        // 1. Generate a temporary authorization token
+        $token = Str::random(64);
 
-        return back()->with('success', 'Credentials verified. Please authorize the login via the link sent to your email by PocketBase.');
+        // 2. Store it in session
+        session(['pending_admin_token' => $token]);
+
+        // 3. Construct the verification URL
+        $verifyUrl = route('admin.verify', ['token' => $token]);
+
+        try {
+            // 4. Send the real email via SMTP (Brevo)
+            Mail::to($adminEmail)->send(new AdminLoginVerification($verifyUrl));
+
+            return back()->with('success', 'A secure authorization link has been sent to your email. Please click it to continue.');
+        } catch (\Exception $e) {
+            Log::error('Failed to send admin verification email: ' . $e->getMessage());
+            return back()->with('error', 'Unable to send email. Ensure your SMTP settings are correct in .env');
+        }
     }
 
     public function handlePocketBaseRedirect(Request $request)
     {
         $token = $request->query('token');
+        $storedToken = session('pending_admin_token');
 
-        if ($token) {
-            // In a production environment, you might want to verify the token
-            // with PocketBase here via an internal API call.
+        if ($token && $token === $storedToken) {
+            // Success: Clean up the temporary token
+            session()->forget('pending_admin_token');
+
+            // Grant Admin access
             session(['patapoa_admin_authenticated' => true]);
-            session(['pb_admin_token' => $token]);
 
-            return redirect()->route('admin.dashboard')->with('success', 'Admin access granted.');
+            return redirect()->route('admin.dashboard')->with('success', 'Admin access granted. Welcome back.');
         }
 
-        return redirect()->route('admin.login')->with('error', 'Invalid or missing authentication token.');
+        return redirect()->route('admin.login')->with('error', 'Invalid, expired, or missing authorization token.');
     }
 
     public function logout()
