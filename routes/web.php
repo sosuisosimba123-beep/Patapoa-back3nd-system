@@ -4,43 +4,47 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('admin.dashboard');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+    // Public routes
+    Route::get('/login', [AdminController::class, 'showLoginForm'])->name('login');
+    Route::get('/verify', [AdminController::class, 'handlePocketBaseRedirect'])->name('verify');
+    Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
-    // Orders
-    Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
+    // Protected routes
+    Route::middleware(['admin.auth'])->group(function () {
+        Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard', [AdminController::class, 'dashboard']); // Alias
 
-    // Merchants
-    Route::get('/merchants', [AdminController::class, 'merchants'])->name('merchants');
-    Route::post('/merchants', [AdminController::class, 'storeMerchant'])->name('merchants.store');
-    Route::post('/merchants/{id}/verify', [AdminController::class, 'verifyMerchant'])->name('merchants.verify');
+        // Orders
+        Route::get('/orders', [AdminController::class, 'orders'])->name('orders');
 
-    // Users
-    Route::post('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
+        // Merchants
+        Route::get('/merchants', [AdminController::class, 'merchants'])->name('merchants');
+        Route::post('/merchants', [AdminController::class, 'storeMerchant'])->name('merchants.store');
+        Route::post('/merchants/{id}/verify', [AdminController::class, 'verifyMerchant'])->name('merchants.verify');
 
-    // Deliveries
-    Route::get('/deliveries', [AdminController::class, 'deliveries'])->name('deliveries');
-    Route::post('/riders', [AdminController::class, 'storeRider'])->name('riders.store');
-    Route::post('/riders/{id}/verify', [AdminController::class, 'verifyRider'])->name('riders.verify');
+        // Users
+        Route::post('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
 
-    // Financials
-    Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
-    Route::post('/orders/{id}/mark-as-paid', [AdminController::class, 'markAsPaid'])->name('orders.mark-paid');
+        // Deliveries
+        Route::get('/deliveries', [AdminController::class, 'deliveries'])->name('deliveries');
+        Route::post('/riders', [AdminController::class, 'storeRider'])->name('riders.store');
+        Route::post('/riders/{id}/verify', [AdminController::class, 'verifyRider'])->name('riders.verify');
 
-    // Settings
-    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-    Route::post('/settings/pricing', [AdminController::class, 'updatePricing'])->name('settings.pricing');
-    Route::post('/settings/platform', [AdminController::class, 'updatePlatformSettings'])->name('settings.platform');
+        // Financials
+        Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
+        Route::post('/orders/{id}/mark-as-paid', [AdminController::class, 'markAsPaid'])->name('orders.mark-paid');
 
-    // Security Hub
-    Route::get('/security', [AdminController::class, 'security'])->name('security');
-    Route::post('/security/alerts/{id}/resolve', [AdminController::class, 'resolveSecurityAlert'])->name('security.resolve');
+        // Settings
+        Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+        Route::post('/settings/pricing', [AdminController::class, 'updatePricing'])->name('settings.pricing');
+        Route::post('/settings/platform', [AdminController::class, 'updatePlatformSettings'])->name('settings.platform');
+
+        // Security Hub
+        Route::get('/security', [AdminController::class, 'security'])->name('security');
+        Route::post('/security/alerts/{id}/resolve', [AdminController::class, 'resolveSecurityAlert'])->name('security.resolve');
+    });
 });
-
-Route::post('/logout', function () {
-    auth()->logout();
-    return redirect('/');
-})->name('auth.logout');

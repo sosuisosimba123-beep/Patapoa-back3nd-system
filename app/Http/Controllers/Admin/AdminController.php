@@ -21,6 +21,33 @@ use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
+    public function showLoginForm()
+    {
+        return view('admin.login');
+    }
+
+    public function handlePocketBaseRedirect(Request $request)
+    {
+        $token = $request->query('token');
+
+        if ($token) {
+            // In a production environment, you might want to verify the token
+            // with PocketBase here via an internal API call.
+            session(['patapoa_admin_authenticated' => true]);
+            session(['pb_admin_token' => $token]);
+
+            return redirect()->route('admin.dashboard')->with('success', 'Admin access granted.');
+        }
+
+        return redirect()->route('admin.login')->with('error', 'Invalid or missing authentication token.');
+    }
+
+    public function logout()
+    {
+        session()->forget(['patapoa_admin_authenticated', 'pb_admin_token']);
+        return redirect()->route('admin.login')->with('success', 'Logged out successfully.');
+    }
+
     public function dashboard()
     {
         $paidOrdersQuery = Order::whereIn('payment_status', ['paid', 'completed']);
