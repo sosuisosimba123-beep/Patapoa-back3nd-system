@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminController;
 
 Route::get('/', function () {
-    return view('patapoa.online');
+    return view('landing');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
