@@ -43,11 +43,11 @@ class AdminController extends Controller
             'password' => 'required',
         ]);
 
-        $adminEmail = env('PB_ADMIN_EMAIL', 'sosuisosimba123@gmail.com');
+        $adminEmail = strtolower(env('PB_ADMIN_EMAIL', 'sosuisosimba123@gmail.com'));
         $adminPass = env('PB_ADMIN_PASSWORD', '0767080236Euty.');
 
-        if ($request->email !== $adminEmail || $request->password !== $adminPass) {
-            return back()->with('error', 'Invalid admin credentials.');
+        if (strtolower($request->email) !== $adminEmail || $request->password !== $adminPass) {
+            return back()->with('error', 'Invalid admin credentials. Please check your email/password and try again.');
         }
 
         // 1. Generate a temporary authorization token
