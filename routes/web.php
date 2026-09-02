@@ -7,6 +7,10 @@ Route::get('/', function () {
     return view('landing');
 });
 
+Route::get('/download-apk', function () {
+    return response()->json(['message' => 'The Patapoa APK is being prepared for release. Please check back soon!']);
+})->name('download.apk');
+
 Route::prefix('admin')->name('admin.')->group(function () {
     // Public login gateway
     Route::get('/login', [AdminController::class, 'showLoginForm'])->name('login');
