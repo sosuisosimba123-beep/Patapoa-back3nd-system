@@ -78,6 +78,10 @@
                 <span class="material-symbols-outlined">receipt_long</span>
                 <span class="text-sm">Transactions</span>
             </a>
+            <a href="{{ route('admin.security') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all {{ request()->routeIs('admin.security') ? 'active-nav' : 'text-on-surface-variant font-medium hover:bg-surface-container-highest' }}">
+                <span class="material-symbols-outlined">security</span>
+                <span class="text-sm">Security Hub</span>
+            </a>
             <a href="{{ route('admin.settings') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all {{ request()->routeIs('admin.settings') ? 'active-nav' : 'text-on-surface-variant font-medium hover:bg-surface-container-highest' }}">
                 <span class="material-symbols-outlined">settings</span>
                 <span class="text-sm">Settings</span>

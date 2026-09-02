@@ -34,6 +34,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::post('/settings/pricing', [AdminController::class, 'updatePricing'])->name('settings.pricing');
     Route::post('/settings/platform', [AdminController::class, 'updatePlatformSettings'])->name('settings.platform');
+
+    // Security Hub
+    Route::get('/security', [AdminController::class, 'security'])->name('security');
+    Route::post('/security/alerts/{id}/resolve', [AdminController::class, 'resolveSecurityAlert'])->name('security.resolve');
 });
 
 Route::post('/logout', function () {

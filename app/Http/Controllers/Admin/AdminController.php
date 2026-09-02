@@ -13,6 +13,7 @@ use App\Models\SearchLog;
 use App\Models\DeliveryPricingRule;
 use App\Models\PlatformSetting;
 use App\Models\Product;
+use App\Models\SecurityAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -380,5 +381,39 @@ class AdminController extends Controller
         });
 
         return back()->with('success', 'Order #' . $order->display_id . ' marked as paid successfully.');
+    }
+
+    public function security()
+    {
+        $alerts = SecurityAlert::where('status', '!=', 'resolved')->latest()->take(10)->get();
+
+        // Mocking some data if table is empty for first view
+        if ($alerts->isEmpty()) {
+            $alerts = collect([
+                new SecurityAlert([
+                    'id' => 0,
+                    'type' => 'critical',
+                    'title' => 'Someone is poking at the admin pages',
+                    'description' => 'An attacker is trying lots of hidden web addresses on the site, hunting for a way in.',
+                    'source_ip' => '32.122.195.63',
+                    'status' => 'active'
+                ])
+            ]);
+        }
+
+        $systemsWatched = 8;
+        $activeAlertsCount = SecurityAlert::where('status', 'active')->count() ?: 1;
+
+        return view('admin.security', compact('alerts', 'systemsWatched', 'activeAlertsCount'));
+    }
+
+    public function resolveSecurityAlert($id)
+    {
+        // For the mock alert with ID 0, just return
+        if ($id == 0) return back()->with('success', 'Demo alert resolved');
+
+        $alert = SecurityAlert::findOrFail($id);
+        $alert->update(['status' => 'resolved']);
+        return back()->with('success', 'Security alert marked as resolved');
     }
 }
