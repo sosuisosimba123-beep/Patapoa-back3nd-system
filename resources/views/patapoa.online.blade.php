@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patapoa | Agiza Tukuletee</title>
@@ -65,10 +65,10 @@
     <!-- Main Hero Section -->
     <main class="flex-grow flex items-center justify-center px-6 py-12 z-10">
         <div class="max-w-4xl w-full text-center space-y-8">
-            
+
             <!-- Main Glass Card -->
             <div class="glass-panel p-8 md:p-14 rounded-3xl shadow-2xl relative overflow-hidden">
-                
+
                 <!-- Decorative badge -->
                 <div class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full text-emerald-400 text-xs md:text-sm font-semibold mb-6">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -132,4 +132,3 @@
 
 </body>
 </html>
-   
