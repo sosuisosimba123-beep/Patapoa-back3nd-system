@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Merchant;
 use App\Models\DeliveryPricingRule;
 use App\Models\PlatformSetting;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\PushNotificationService;
@@ -117,17 +118,24 @@ class OrderService
                 $order->orderItems()->create($item);
             }
 
-            // SMS Notification Flow
+            // SMS Notification Flow: Broadcast to all registered riders
             if (config('services.sms.enabled', false)) {
-                // Fallback active rider phone or specific logic to find nearby riders
-                $riderPhone = '+255715080235';
+                $riders = User::where('user_type', 'rider')->get();
 
-                $message = "Mpango Mpya! Patapoa Order #{$order->id}. " .
+                $message = "Patapoa Order Mpya! (#{$order->id}). " .
                            "Pickup: {$merchant->store_name}. " .
-                           "Deliver to: {$address->address_line_1}. " .
-                           "Customer: {$user->phone}";
+                           "Wahi mzigo! Ingia kwenye app ukubali kabla mwenzako hajachukua.";
 
-                $this->sms->sendSms($riderPhone, $message);
+                if ($riders->isEmpty()) {
+                    // Safety Fallback for testing/empty table
+                    $this->sms->sendSms('+255715080235', $message);
+                } else {
+                    foreach ($riders as $rider) {
+                        if ($rider->phone) {
+                            $this->sms->sendSms($rider->phone, $message);
+                        }
+                    }
+                }
             }
 
             return $order;
