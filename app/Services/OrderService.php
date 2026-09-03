@@ -12,16 +12,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\PushNotificationService;
 use App\Services\OsmService;
+use App\Services\SmsService;
 
 class OrderService
 {
     protected $notifications;
     protected $osm;
+    protected $sms;
 
-    public function __construct(PushNotificationService $notifications, OsmService $osm)
+    public function __construct(PushNotificationService $notifications, OsmService $osm, SmsService $sms)
     {
         $this->notifications = $notifications;
         $this->osm = $osm;
+        $this->sms = $sms;
     }
 
     /**
@@ -112,6 +115,19 @@ class OrderService
 
             foreach ($orderItemsData as $item) {
                 $order->orderItems()->create($item);
+            }
+
+            // SMS Notification Flow
+            if (config('services.sms.enabled', false)) {
+                // Fallback active rider phone or specific logic to find nearby riders
+                $riderPhone = '+255715080235';
+
+                $message = "Mpango Mpya! Patapoa Order #{$order->id}. " .
+                           "Pickup: {$merchant->store_name}. " .
+                           "Deliver to: {$address->address_line_1}. " .
+                           "Customer: {$user->phone}";
+
+                $this->sms->sendSms($riderPhone, $message);
             }
 
             return $order;
