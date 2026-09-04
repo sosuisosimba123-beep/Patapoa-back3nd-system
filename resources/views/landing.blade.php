@@ -3,6 +3,7 @@
 <html class="dark" lang="sw"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 <title>Patapoa - Agiza tukuletee | Powered by NACCI SOFTLABS</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -775,28 +776,28 @@
   function createParticleBurst() {
     const container = document.getElementById('particle-burst-box');
     if (!container) return;
-    
+
     const count = 38;
     for (let i = 0; i < count; i++) {
       const p = document.createElement('div');
       p.className = 'disrupt-particle';
-      
+
       const size = Math.random() * 8 + 3;
       p.style.width = `${size}px`;
       p.style.height = `${size}px`;
-      
+
       // Random explosive trajectories
       const angle = Math.random() * Math.PI * 2;
       const distance = Math.random() * 320 + 80;
       const tx = Math.cos(angle) * distance;
       const ty = Math.sin(angle) * distance;
-      
+
       p.style.setProperty('--tx', `${tx}px`);
       p.style.setProperty('--ty', `${ty}px`);
-      
+
       const duration = Math.random() * 0.5 + 0.5;
       p.style.animation = `particleExplode ${duration}s cubic-bezier(0.12, 0.8, 0.33, 1) forwards`;
-      
+
       container.appendChild(p);
     }
   }
@@ -874,7 +875,7 @@
 
     let timeLeft = 1.2;
     const timerElem = document.getElementById('ignite-timer');
-    
+
     const interval = setInterval(() => {
       timeLeft = Math.max(0, +(timeLeft - 0.1).toFixed(1));
       if (timerElem) timerElem.innerText = timeLeft.toString();
