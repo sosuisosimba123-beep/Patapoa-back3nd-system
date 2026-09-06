@@ -8,6 +8,10 @@ Route::get('/', function () {
 });
 
 Route::get('/download-apk', function () {
+    $path = public_path('downloads/patapoa-debug.apk');
+    if (file_exists($path)) {
+        return response()->download($path, 'patapoa-debug.apk');
+    }
     return response()->json(['message' => 'The Patapoa APK is being prepared for release. Please check back soon!']);
 })->name('download.apk');
 

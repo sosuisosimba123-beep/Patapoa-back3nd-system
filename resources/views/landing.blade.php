@@ -71,8 +71,8 @@
 
   .ambient-glow {
     position: absolute;
-    width: 650px;
-    height: 650px;
+    width: min(650px, 90vw);
+    height: min(650px, 90vw);
     background: radial-gradient(circle, rgba(0, 209, 119, 0.16) 0%, rgba(11, 13, 12, 0) 70%);
     border-radius: 50%;
     pointer-events: none;
@@ -271,10 +271,10 @@
 <!-- Particle Container -->
 <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20" id="particle-burst-box"></div>
 <!-- Central Kinetic Delivery Rider Icon Scene -->
-<div class="relative z-30 flex flex-col items-center justify-center">
-<div class="rider-vehicle relative w-[320px] h-[240px] flex items-center justify-center cursor-pointer" id="rider-wrap" onclick="triggerIgnition()">
+<div class="relative z-30 flex flex-col items-center justify-center w-full px-4">
+<div class="rider-vehicle relative w-full max-w-[320px] h-[240px] flex items-center justify-center cursor-pointer" id="rider-wrap" onclick="triggerIgnition()">
 <!-- Neon Delivery Rider SVG from DataStore https://lh3.googleusercontent.com/aida/AEtjO1XRXgTZUxtjxky1zbR1ykXN20PTApXoG9E2OUGqA6PkH6JBXyI9nYYH9atPsOjnkMeBLcMF7SA_P3_W_kkYWk6j7LqXMPoy6_7mp7FSFMD6Jdl60Wq4A9BOuIuZ1tU5U4V0VxAQt7fg8kJwWPxhrN6IZy4EXxSCCsA8z08civN9kBil94OBNL7baaBl6rNcom_Yey3qjRXkBemz_zHuMGKfR7hP-PlZL5Ukd6vXPMoRUDBASeIdVl2Eg3yN with animated headlight beam and speed lines -->
-<svg class="filter drop-shadow-[0_0_20px_rgba(0,209,119,0.5)]" fill="none" height="240" viewbox="0 0 160 120" width="320" xmlns="http://www.w3.org/2000/svg">
+<svg class="w-full h-auto max-w-[320px] filter drop-shadow-[0_0_20px_rgba(0,209,119,0.5)]" fill="none" viewbox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
 <!-- Background Glow Aura -->
 <circle cx="80" cy="65" fill="#00d177" fill-opacity="0.12" filter="blur(18px)" r="45"></circle>
 <!-- Speed lines / Kinetic trail -->
@@ -366,7 +366,7 @@
 <!-- ============================================================== -->
 <!-- MAIN SINGLE-PAGE INTRO CONTENT                                 -->
 <!-- ============================================================== -->
-<main class="relative z-10 pt-[120px] pb-24 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<main class="relative z-10 pt-[120px] pb-24 px-margin-mobile md:px-margin-desktop w-full max-w-container-max mx-auto box-border">
 <!-- HERO SECTION: 3D Mouse Tilt Glass Card -->
 <section class="mb-24 flex flex-col items-center text-center relative">
 <!-- Outer container for 3D card perspective -->
@@ -390,7 +390,7 @@
 <!-- STRICT ACTION BUTTONS: ONLY 2 BUTTONS PERMITTED -->
 <div class="flex flex-col sm:flex-row items-center justify-center gap-5 w-full max-w-lg">
 <!-- Button 1: Download App -->
-<a class="btn-download-app w-full sm:w-auto flex-1 px-8 py-4 rounded-full font-bold text-base flex items-center justify-center gap-3 text-[#00210e] text-center" href="#download" title="Pakua Patapoa App">
+<a class="btn-download-app w-full sm:w-auto flex-1 px-8 py-4 rounded-full font-bold text-base flex items-center justify-center gap-3 text-[#00210e] text-center" href="{{ route('download.apk') }}" title="Pakua Patapoa App">
 <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">install_mobile</span>
 <div class="text-left">
 <div class="text-[10px] uppercase font-mono tracking-widest leading-none text-[#00391c]/80">Pata sasa</div>
@@ -729,7 +729,7 @@
     </p>
 <!-- STRICT ACTION BUTTONS (2 Allowed buttons duplicated for accessible footer call to action) -->
 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
-<a class="btn-download-app w-full sm:w-auto flex-1 px-7 py-3.5 rounded-full font-bold text-sm flex items-center justify-center gap-2.5 text-[#00210e]" href="#download" title="Download Patapoa App">
+<a class="btn-download-app w-full sm:w-auto flex-1 px-7 py-3.5 rounded-full font-bold text-sm flex items-center justify-center gap-2.5 text-[#00210e]" href="{{ route('download.apk') }}" title="Download Patapoa App">
 <span class="material-symbols-outlined text-xl">install_mobile</span>
 <span>Download App</span>
 </a>
