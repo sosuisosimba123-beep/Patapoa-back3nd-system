@@ -109,13 +109,13 @@
         </div>
     </main>
 
-    <footer class="w-full py-6 px-6 md:px-12 border-t border-slate-800/60 flex flex-col md:flex-row justify-between items-center text-sm text-slate-400 gap-4 z-10">
-        <div class="flex items-center space-x-2">
-            <span>&copy; {{ date('Y') }} Patapoa. Powered by <strong class="text-slate-200">NACCI SOFTLABS</strong>.</span>
+    <footer class="w-full py-10 px-6 md:px-12 border-t border-slate-800/60 flex flex-col md:flex-row justify-between items-center text-sm text-slate-400 gap-6 z-10">
+        <div class="max-w-3xl text-center md:text-left">
+            <span>&copy; {{ date('Y') }} Patapoa. Powered by <strong class="text-slate-200">NACCI SOFTLABS</strong> — A prestigious Tanzanian technology startup by visionary entrepreneurs <span class="text-white font-bold">Eutychus Daudi Massambu</span> and <span class="text-white font-bold">Eustace Daudi Massambu</span>. Built on a foundation of world-class ambition and a commitment to pioneering high-impact digital ecosystems.</span>
         </div>
         <div class="flex items-center space-x-6">
             <span>Inquiries & Support:</span>
-            <a href="tel:+255715080235" class="text-orange-400 font-semibold hover:underline flex items-center gap-1.5">
+            <a href="tel:+255715080235" class="text-orange-400 font-semibold hover:underline flex items-center gap-1.5 whitespace-nowrap">
                 📞 +255 715 080 235
             </a>
         </div>
